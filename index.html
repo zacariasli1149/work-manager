@@ -136,6 +136,22 @@ main{height:100vh;overflow:auto;padding:22px 28px 60px}
 .chip::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c)}
 .tag{font-size:11.5px;border-radius:5px;padding:0 6px;background:var(--blue-weak);color:var(--blue)}
 .detail{color:var(--muted);font-size:12.5px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mchips .chip::before{display:none}
+/* links */
+.quick{display:flex;gap:8px;margin-bottom:12px}
+.quick input{flex:1;min-width:0;border:1.5px dashed var(--accent);background:var(--accent-weak);border-radius:10px;padding:10px 12px;color:var(--text);font:inherit}
+.quick input:focus{outline:none;border-style:solid;background:var(--panel)}
+.link{display:flex;align-items:flex-start;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 14px;margin-bottom:8px;box-shadow:var(--shadow)}
+.link.pinned{border-color:color-mix(in srgb,var(--orange) 45%,var(--line))}
+.link .fav{flex:none;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-weight:700;color:#fff;background:var(--c);font-size:15px}
+.link .body{flex:1;min-width:0}
+.link .lt{font-weight:600;font-size:14.5px;color:var(--text);text-decoration:none;overflow-wrap:anywhere}
+.link .lt:hover{color:var(--accent);text-decoration:underline}
+.link .lu{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.link .detail{white-space:pre-wrap;overflow-wrap:anywhere}
+.link .lacts{display:flex;gap:4px;flex:none}
+.check-row{display:flex;align-items:center;gap:8px;font-size:13.5px;margin:4px 0 2px}
+.group h3 .btn{font-weight:500}
 .badge{flex:none;font-size:12px;font-weight:600;border-radius:999px;padding:2px 10px;white-space:nowrap;background:var(--panel-2);color:var(--muted);border:1px solid var(--line)}
 .badge.overdue{background:var(--red);color:#fff;border-color:var(--red)}
 .badge.today{background:var(--red);color:#fff;border-color:var(--red);animation:pulse 1.6s ease-in-out infinite}
@@ -369,6 +385,29 @@ main{height:100vh;overflow:auto;padding:22px 28px 60px}
     </footer>
   </form>
 </div>
+<!-- link modal -->
+<div class="mask" id="linkMask">
+  <form class="modal" id="linkForm" autocomplete="off" style="max-width:520px">
+    <header><span id="linkTitle">新增連結</span><button type="button" data-close aria-label="關閉">×</button></header>
+    <div class="content">
+      <div class="field"><label>網址 *</label><input name="url" required placeholder="貼上網址，或直接貼整段對話訊息" inputmode="url" autocapitalize="off" spellcheck="false"></div>
+      <div class="hint" id="linkHint" style="margin-top:-6px">貼上整段訊息也可以，系統會自動抓出網址，其餘文字放進備註。</div>
+      <div class="field"><label>名稱</label><input name="title" maxlength="120" placeholder="留空就顯示網域名稱，例如：南非證照申請表"></div>
+      <div class="two">
+        <div class="field"><label>專案</label><select name="projectId"></select></div>
+        <div class="field"><label>誰給的 / 來源</label><input name="from" maxlength="40" placeholder="例如：John、LINE 群組"></div>
+      </div>
+      <div class="field"><label>備註</label><textarea name="note" style="min-height:70px" placeholder="這個連結是做什麼用的、帳號提示…（請勿存密碼）"></textarea></div>
+      <label class="check-row"><input type="checkbox" name="pinned"> ⭐ 釘選（常用連結排最上面）</label>
+      <div class="err" id="linkErr"></div>
+    </div>
+    <footer>
+      <button type="button" class="btn danger left" id="delLink">刪除</button>
+      <button type="button" class="btn" data-close>取消</button>
+      <button type="submit" class="btn primary">儲存</button>
+    </footer>
+  </form>
+</div>
 <div class="pop" id="addPop">
   <button type="button" data-newcountry>🌐 新增國家</button>
   <button type="button" data-newproj>📁 新增專案</button>
@@ -432,7 +471,7 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
 /* ================= state ================= */
 const KEY = 'workmgr.data.v1', UIKEY = 'workmgr.ui.v1', SYNCKEY = 'workmgr.sync.v1';
 let state = normalize(store.get(KEY)) || seed();
-let ui = Object.assign({ view:'today', project:'all', showDone:false, search:'', status:'open', ganttW:32, collapsed:{}, fCountry:'all', fProj:'all', sStatus:'open' }, store.get(UIKEY) || {});
+let ui = Object.assign({ view:'today', project:'all', showDone:false, search:'', status:'open', ganttW:32, collapsed:{}, fCountry:'all', fProj:'all', sStatus:'open', lCountry:'all', lProj:'all', lSearch:'' }, store.get(UIKEY) || {});
 ui.date = todayStr();
 let lastDay = todayStr();
 
@@ -440,6 +479,7 @@ function normalize(s){
   if (!s || !Array.isArray(s.tasks) || !Array.isArray(s.projects)) return null;
   s.deleted = s.deleted && typeof s.deleted === 'object' ? s.deleted : {};
   s.countries = Array.isArray(s.countries) ? s.countries : [];
+  s.links = Array.isArray(s.links) ? s.links : [];
   return s;
 }
 function seed(){
@@ -454,6 +494,7 @@ function seed(){
       mk('（範例）下週的長期任務', p2, 0, 10, 'todo', '甘特圖會顯示從開始日到 Deadline 的完整期間。'),
     ],
     countries:[],
+    links:[],
     deleted:{}
   };
 }
@@ -495,6 +536,8 @@ function validFilter(){
   if (bad) { ui.project = 'all'; if (ui.view === 'scope') ui.view = 'today'; }
   if (ui.fCountry !== 'all' && ui.fCountry !== 'none' && !country(ui.fCountry)) ui.fCountry = 'all';
   if (ui.fProj !== 'all' && ui.fProj !== 'none' && !proj(ui.fProj)) ui.fProj = 'all';
+  if (ui.lCountry !== 'all' && ui.lCountry !== 'none' && !country(ui.lCountry)) ui.lCountry = 'all';
+  if (ui.lProj !== 'all' && ui.lProj !== 'none' && !proj(ui.lProj)) ui.lProj = 'all';
 }
 const filtered = () => state.tasks;   // today / daily / gantt always show everything
 
@@ -565,7 +608,12 @@ function merge(a, b){
   // drop tombstones older than 90 days to keep the file small
   const cutoff = now() - 90 * 86400000;
   for (const id in deleted) if (deleted[id] < cutoff) delete deleted[id];
-  return { countries: mergeList(a.countries || [], b.countries || []), projects: mergeList(a.projects, b.projects), tasks: mergeList(a.tasks, b.tasks), deleted };
+  // merge every list (countries, projects, tasks, links, and any added later) so nothing is dropped
+  const out = { countries:[], projects:[], tasks:[], links:[] };
+  const keys = new Set([...Object.keys(out), ...Object.keys(a), ...Object.keys(b || {})]);
+  keys.forEach(k => { if (k !== 'deleted' && (Array.isArray(a[k]) || Array.isArray(b?.[k]) || k in out)) out[k] = mergeList(a[k] || [], b?.[k] || []); });
+  out.deleted = deleted;
+  return out;
 }
 const sameData = (a, b) => !!a && !!b && JSON.stringify(a) === JSON.stringify(b);
 
@@ -590,7 +638,7 @@ async function syncNow(){
     for (let attempt = 0; attempt < 3; attempt++) {
       const { data: remote, sha } = await pullRemote(syncCfg);
       const before = JSON.stringify(state);
-      const merged = remote ? merge(state, remote) : merge(state, { countries:[], projects:[], tasks:[], deleted:{} });
+      const merged = remote ? merge(state, remote) : merge(state, { countries:[], projects:[], tasks:[], links:[], deleted:{} });
       if (JSON.stringify(merged) !== before) { state = merged; saveLocal(); render(); }
       if (sameData(merged, remote)) break;
       try { await pushRemote(syncCfg, merged, sha); break; }
@@ -636,7 +684,7 @@ sf.addEventListener('submit', async e => {
       state.tasks = state.tasks.filter(t => !t.sample);
       state.projects = state.projects.filter(p => !p.sample);
       if (state.tasks.length && confirm(`雲端已有 ${remote.tasks.length} 項任務。\n\n按「確定」：用雲端資料取代這台裝置的資料\n按「取消」：把兩邊資料合併`)) {
-        state = { countries:[], projects:[], tasks:[], deleted:{} };
+        state = { countries:[], projects:[], tasks:[], links:[], deleted:{} };
       }
       saveLocal();
     }
@@ -659,15 +707,17 @@ $('#syncBtn').addEventListener('click', openSync);
 $('#syncSetBtn').addEventListener('click', openSync);
 
 /* ================= rendering ================= */
-const VIEWS = [['today','🎯','今日焦點','今日'],['daily','📅','每日待辦','每日'],['gantt','📊','甘特圖','甘特圖'],['all','📋','全部任務','全部']];
+const VIEWS = [['today','🎯','今日焦點','今日'],['daily','📅','每日待辦','每日'],['gantt','📊','甘特圖','甘特圖'],['all','📋','全部任務','全部'],['links','🔗','連結庫','連結']];
 function render(){
   validFilter();
   renderNav(); renderProjects();
-  const fn = { today:renderToday, daily:renderDaily, gantt:renderGantt, all:renderAll, scope:renderScope }[ui.view] || renderToday;
-  const searchFocused = document.activeElement?.id === 'search';
-  const pos = searchFocused ? document.activeElement.selectionStart : 0;
+  const fn = { today:renderToday, daily:renderDaily, gantt:renderGantt, all:renderAll, scope:renderScope, links:renderLinks }[ui.view] || renderToday;
+  const fid = document.activeElement?.id, keepFocus = ['search','lSearch','quickUrl'].includes(fid);
+  const pos = keepFocus ? document.activeElement.selectionStart : 0;
+  const quickVal = $('#quickUrl')?.value || '';
   $('#main').innerHTML = banner() + fn();
-  if (searchFocused) { const s = $('#search'); if (s) { s.focus(); s.setSelectionRange(pos, pos); } }
+  const qu = $('#quickUrl'); if (qu && quickVal) qu.value = quickVal;   // a background sync must not wipe what's being pasted
+  if (keepFocus) { const s = $('#' + fid); if (s) { s.focus(); try { s.setSelectionRange(pos, pos); } catch(e){} } }
   if (ui.view === 'gantt') scrollGantt();
   const n = state.tasks.filter(t => !isDone(t) && t.due === todayStr()).length;
   document.title = n ? `(${n} 今日截止) 工作管理系統` : '工作管理系統';
@@ -680,6 +730,7 @@ function renderNav(){
     let c = '';
     if (k === 'today' && hot) c = `<span class="cnt hot">${hot}</span>`;
     if (k === 'all') c = `<span class="cnt">${open.length}</span>`;
+    if (k === 'links' && state.links.length) c = `<span class="cnt">${state.links.length}</span>`;
     return short
       ? `<button data-view="${k}" class="${ui.view===k?'on':''}"><span class="ic">${ic}</span>${s}${c}</button>`
       : `<button data-view="${k}" class="${ui.view===k?'on':''}"><span class="ic">${ic}</span>${l}${c}</button>`;
@@ -823,31 +874,86 @@ function byStatus(list, st){
 }
 const statusSelect = (id, val) => `<select id="${id}" title="狀態">${STATUS_OPTS.map(([v,l])=>`<option value="${v}" ${val===v?'selected':''}>${l}</option>`).join('')}</select>`;
 
-function renderAll(){
-  const q = ui.search.trim().toLowerCase();
-  const fc = ui.fCountry, fp = ui.fProj;
-  // projects offered in the project filter follow the chosen country
+// Country + project dropdowns (project list follows the chosen country). Shared by 全部任務 and 連結庫.
+function cpFilter(fc, fp, ids){
   const projOpts = fc === 'all' ? state.projects : fc === 'none' ? looseProjects() : state.projects.filter(p => p.countryId === fc);
   const fpOk = fp === 'all' || (fp === 'none' ? fc === 'all' || fc === 'none' : projOpts.some(p => p.id === fp));
   const fpUse = fpOk ? fp : 'all';
-  let list = state.tasks.filter(t => {
-    const p = proj(t.projectId);
+  const match = projectId => {
+    const p = proj(projectId);
     if (fc === 'none' && projCountry(p)) return false;
     if (fc !== 'all' && fc !== 'none' && p?.countryId !== fc) return false;
-    if (fpUse !== 'all' && !inFilter(t, fpUse)) return false;
-    return !q || (t.title + ' ' + (t.detail||'') + ' ' + pName(t)).toLowerCase().includes(q);
-  });
-  list = byStatus(list, ui.status);
-  const active = fc !== 'all' || fpUse !== 'all' || ui.status !== 'open' || q;
+    if (fpUse === 'none') return !p;
+    return fpUse === 'all' || projectId === fpUse;
+  };
   const opt = (v, l, cur) => `<option value="${v}" ${cur===v?'selected':''}>${esc(l)}</option>`;
+  const html = `<select id="${ids[0]}" title="國家">${opt('all','全部國家',fc)}${state.countries.map(c=>opt(c.id,'🌐 '+c.name,fc)).join('')}${opt('none','未指定國家',fc)}</select>
+    <select id="${ids[1]}" title="專案">${opt('all','全部專案',fpUse)}${projOpts.map(p=>opt(p.id,p.name,fpUse)).join('')}${fc==='all'||fc==='none'?opt('none','未分類',fpUse):''}</select>`;
+  return { html, match, active: fc !== 'all' || fpUse !== 'all' };
+}
+
+function renderAll(){
+  const q = ui.search.trim().toLowerCase();
+  const cp = cpFilter(ui.fCountry, ui.fProj, ['fCountry','fProj']);
+  let list = state.tasks.filter(t => cp.match(t.projectId) && (!q || (t.title + ' ' + (t.detail||'') + ' ' + pName(t)).toLowerCase().includes(q)));
+  list = byStatus(list, ui.status);
+  const active = cp.active || ui.status !== 'open' || q;
   let h = header('全部任務', `共 ${list.length} 項`);
   h += `<div class="tools filters"><input type="search" id="search" placeholder="搜尋標題、內容、專案…" value="${esc(ui.search)}">
     ${statusSelect('statusSel', ui.status)}
-    <select id="fCountry" title="國家">${opt('all','全部國家',fc)}${state.countries.map(c=>opt(c.id,'🌐 '+c.name,fc)).join('')}${opt('none','未指定國家',fc)}</select>
-    <select id="fProj" title="專案">${opt('all','全部專案',fpUse)}${projOpts.map(p=>opt(p.id,p.name,fpUse)).join('')}${fc==='all'||fc==='none'?opt('none','未分類',fpUse):''}</select>
+    ${cp.html}
     ${active?'<button class="btn sm" data-resetfilters>✕ 清除篩選</button>':''}</div>`;
   if (!list.length) return h + `<div class="empty">沒有符合條件的任務。</div>`;
   return h + list.map(t => taskHTML(t)).join('');
+}
+
+/* ---------- links ---------- */
+const URL_RE = /(https?:\/\/[^\s<>"'，。、）)】」]+|www\.[^\s<>"'，。、）)】」]+)/gi;
+function cleanUrl(u){
+  u = String(u || '').trim().replace(/[.,;:!?]+$/, '');
+  if (/^www\./i.test(u)) u = 'https://' + u;
+  if (!/^https?:\/\//i.test(u) && /^[\w-]+(\.[\w-]+)+([\/?#].*)?$/.test(u)) u = 'https://' + u;   // "example.com/x"
+  try { const x = new URL(u); return /^https?:$/.test(x.protocol) ? x.href : ''; } catch(e){ return ''; }
+}
+const host = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch(e){ return u; } };
+const linkName = l => l.title || host(l.url);
+function sortLinks(list){ return list.sort((a,b) => (b.pinned?1:0) - (a.pinned?1:0) || String(b.createdAt).localeCompare(String(a.createdAt))); }
+function linkHTML(l){
+  const p = proj(l.projectId), c = projCountry(p), safe = cleanUrl(l.url);
+  const pl = p ? (c ? `${c.name} › ${p.name}` : p.name) : '未分類';
+  const d = String(l.createdAt || '').slice(0,10);
+  return `<div class="link ${l.pinned?'pinned':''}">
+    <div class="fav" style="--c:${esc(p?.color || NONE_COLOR)}">${esc((host(l.url)[0] || '?').toUpperCase())}</div>
+    <div class="body">
+      <a class="lt" href="${esc(safe)}" target="_blank" rel="noopener noreferrer">${l.pinned?'⭐ ':''}${esc(linkName(l))}</a>
+      <div class="lu">${esc(host(l.url))}</div>
+      <div class="meta"><span class="chip" style="--c:${esc(p?.color || NONE_COLOR)}">${esc(pl)}</span>${l.from?`<span>來自 ${esc(l.from)}</span>`:''}${d?`<span>${md(d)}</span>`:''}</div>
+      ${l.note ? `<div class="detail">${esc(l.note)}</div>` : ''}
+    </div>
+    <div class="lacts">
+      <button class="btn sm" data-copylink="${l.id}" title="複製網址">📋</button>
+      <button class="btn sm" data-editlink="${l.id}" title="編輯">✎</button>
+    </div>
+  </div>`;
+}
+function renderLinks(){
+  const q = ui.lSearch.trim().toLowerCase();
+  const cp = cpFilter(ui.lCountry, ui.lProj, ['lCountry','lProj']);
+  const list = sortLinks(state.links.filter(l => cp.match(l.projectId) &&
+    (!q || [l.title, l.url, l.note, l.from, proj(l.projectId)?.name].join(' ').toLowerCase().includes(q))));
+  let h = `<div class="top"><h1>連結庫</h1><span class="sub">共 ${list.length} 個連結</span><span class="grow"></span><button class="btn primary" data-newlink>＋ 新增連結</button></div>`;
+  h += `<form class="quick" id="quickLink" autocomplete="off"><input id="quickUrl" placeholder="🔗 把別人傳的網址或整段訊息貼在這裡，按 Enter 儲存" autocapitalize="off" spellcheck="false"><button class="btn primary sm" type="submit">儲存</button></form>`;
+  h += `<div class="tools filters"><input type="search" id="lSearch" placeholder="搜尋名稱、網址、備註、來源…" value="${esc(ui.lSearch)}">
+    ${cp.html}${cp.active||q?'<button class="btn sm" data-resetlinks>✕ 清除篩選</button>':''}</div>`;
+  if (!state.links.length) return h + `<div class="empty">還沒有存任何連結。<br>收到重要連結時，貼到上面的框框按 Enter，就不會再找不到了。</div>`;
+  if (!list.length) return h + `<div class="empty">沒有符合條件的連結。</div>`;
+  return h + `<div class="links">${list.map(linkHTML).join('')}</div>`;
+}
+function scopeLinks(f){
+  const list = sortLinks(state.links.filter(l => inFilter({ projectId:l.projectId }, f)));
+  const pid = f.startsWith('c:') || f === 'none' ? '' : f;
+  return `<div class="group"><h3>🔗 相關連結<span class="pill">${list.length}</span><button class="btn sm" data-newlink="${pid}" style="margin-left:auto">＋ 新增連結</button></h3>
+    ${list.length ? `<div class="links">${list.map(linkHTML).join('')}</div>` : '<div class="hint">這裡還沒有連結。</div>'}</div>`;
 }
 
 // Page for one country / project, opened from the sidebar.
@@ -861,15 +967,16 @@ function renderScope(){
   h += `<div class="tools">${statusSelect('sStatusSel', ui.sStatus)}
     ${f !== 'none' ? `<button class="btn sm" data-editfilter>✎ 編輯${isC?'國家':'專案'}</button>` : ''}
     ${isC ? `<button class="btn sm" data-addproj="${f.slice(2)}">＋ 新增專案</button>` : ''}</div>`;
-  if (!list.length) return h + `<div class="empty">沒有符合條件的任務。<br><br><button class="btn primary" data-new>＋ 新增待辦</button></div>`;
-  if (!isC) return h + list.map(t => taskHTML(t)).join('');
+  const lk = scopeLinks(f);
+  if (!list.length) return h + `<div class="empty">沒有符合條件的任務。<br><br><button class="btn primary" data-new>＋ 新增待辦</button></div>` + lk;
+  if (!isC) return h + `<div class="group">${list.map(t => taskHTML(t)).join('')}</div>` + lk;
   // country page: group by project
   const ps = state.projects.filter(p => p.countryId === f.slice(2));
   ps.forEach(p => {
     const l = list.filter(t => t.projectId === p.id);
     if (l.length) h += `<div class="group"><h3><span class="dot" style="background:${esc(p.color)};width:9px;height:9px;border-radius:3px;display:inline-block"></span>${esc(p.name)}<span class="pill">${l.length}</span></h3>${l.map(t=>taskHTML(t)).join('')}</div>`;
   });
-  return h;
+  return h + lk;
 }
 
 let ganttScroll = 0;
@@ -999,6 +1106,89 @@ $('#quickProj').addEventListener('click', () => {
   state.projects.push(p); save(); fillProjSelect(p.id); renderProjects();
 });
 
+/* ================= link modal ================= */
+let editingLink = null;
+const lf = $('#linkForm');
+function projOptions(){
+  const opt = p => `<option value="${p.id}">${esc(p.name)}</option>`;
+  let html = `<option value="">未分類</option>`;
+  state.countries.forEach(c => { const ps = state.projects.filter(p => p.countryId === c.id); if (ps.length) html += `<optgroup label="${esc(c.name)}">${ps.map(opt).join('')}</optgroup>`; });
+  const loose = looseProjects();
+  if (loose.length) html += state.countries.length ? `<optgroup label="未指定國家">${loose.map(opt).join('')}</optgroup>` : loose.map(opt).join('');
+  return html;
+}
+// pull the URL(s) out of a pasted chat message; the rest becomes the note
+function splitPaste(text){
+  const urls = [...String(text).matchAll(URL_RE)].map(m => cleanUrl(m[0])).filter(Boolean);
+  const rest = String(text).replace(URL_RE, ' ').replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n').trim();
+  return { urls: [...new Set(urls)], rest };
+}
+// default project for a new link: the project page you're on, else the 連結庫 project filter
+function defaultLinkProj(){
+  const s = scopeSel();
+  if (proj(s)) return s;
+  if (ui.view === 'links' && proj(ui.lProj)) return ui.lProj;
+  return '';
+}
+function openLink(id, prefill = {}){
+  const l = id ? state.links.find(x => x.id === id) : null;
+  if (id && !l) return;
+  editingLink = l ? l.id : null;
+  $('#linkTitle').textContent = l ? '編輯連結' : '新增連結';
+  $('#delLink').style.display = l ? '' : 'none';
+  $('#linkErr').textContent = '';
+  lf.projectId.innerHTML = projOptions();
+  lf.url.value = l?.url || prefill.url || '';
+  lf.title.value = l?.title || '';
+  lf.projectId.value = (l ? l.projectId : (prefill.projectId ?? defaultLinkProj())) || '';
+  if (!proj(lf.projectId.value)) lf.projectId.value = '';
+  lf.from.value = l?.from || '';
+  lf.note.value = l?.note || prefill.note || '';
+  lf.pinned.checked = !!l?.pinned;
+  $('#linkMask').classList.add('open');
+  if (innerWidth > 820) setTimeout(() => (lf.url.value ? lf.title : lf.url).focus(), 30);
+}
+lf.url.addEventListener('paste', e => {
+  const text = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+  const { urls, rest } = splitPaste(text);
+  if (urls.length && (rest || urls[0] !== text.trim())) {
+    e.preventDefault();
+    lf.url.value = urls[0];
+    if (rest && !lf.note.value.trim()) lf.note.value = rest;
+    if (urls.length > 1) $('#linkErr').textContent = `訊息裡有 ${urls.length} 個網址，這裡先存第一個；要一次存全部，請貼到連結庫上方的快速框。`;
+  }
+});
+lf.addEventListener('submit', e => {
+  e.preventDefault();
+  const url = cleanUrl(lf.url.value);
+  if (!url) { $('#linkErr').textContent = '網址格式不正確（需要 http:// 或 https:// 開頭）'; return; }
+  const data = { url, title: lf.title.value.trim(), projectId: lf.projectId.value || null, from: lf.from.value.trim(), note: lf.note.value.trim(), pinned: lf.pinned.checked };
+  const l = editingLink && state.links.find(x => x.id === editingLink);
+  if (l) { touch(Object.assign(l, data)); toast('已更新'); }
+  else {
+    const dup = state.links.find(x => x.url === url);
+    if (dup && !confirm(`這個網址已經存過了（${linkName(dup)}）。\n還是要再存一筆嗎？`)) return;
+    state.links.push(touch({ id:uid(), createdAt:new Date().toISOString(), ...data })); toast('已儲存連結');
+  }
+  save(); closeModals(); render();
+});
+$('#delLink').addEventListener('click', () => {
+  const l = editingLink && state.links.find(x => x.id === editingLink);
+  if (!l || !confirm(`確定刪除連結「${linkName(l)}」？`)) return;
+  state.links = state.links.filter(x => x !== l); state.deleted[l.id] = now();
+  save(); closeModals(); render(); toast('已刪除');
+});
+function quickSave(text){
+  const { urls, rest } = splitPaste(text);
+  if (!urls.length) { const u = cleanUrl(text); if (u) urls.push(u); }
+  if (!urls.length) { toast('沒有找到網址'); return false; }
+  if (urls.length === 1) { openLink(null, { url: urls[0], note: rest }); return true; }   // one link → let them name it
+  const pid = defaultLinkProj() || null, t = new Date().toISOString();
+  urls.forEach(u => state.links.push(touch({ id:uid(), url:u, title:'', projectId:pid, from:'', note:rest, pinned:false, createdAt:t })));
+  save(); render(); toast(`已儲存 ${urls.length} 個連結`);
+  return true;
+}
+
 /* ================= project modal ================= */
 let editingProj = null, projColor = COLORS[0];
 const pf = $('#projForm');
@@ -1070,20 +1260,21 @@ $('#delProj').addEventListener('click', () => {
   const msg = n ? `專案「${editingProj.name}」底下有 ${n} 項任務。\n\n按「確定」：刪除專案，任務移到「未分類」\n按「取消」：不刪除` : `確定刪除專案「${editingProj.name}」？`;
   if (!confirm(msg)) return;
   state.tasks.forEach(t => { if (t.projectId === editingProj.id) { t.projectId = null; touch(t); } });
+  state.links.forEach(l => { if (l.projectId === editingProj.id) { l.projectId = null; touch(l); } });
   state.projects = state.projects.filter(p => p !== editingProj);
   state.deleted[editingProj.id] = now();
   if (ui.project === editingProj.id) ui.project = 'all';
   save(); saveUI(); closeModals(); render(); toast('專案已刪除');
 });
 
-function closeModals(){ document.querySelectorAll('.mask.open').forEach(m => m.classList.remove('open')); editing = null; editingProj = null; editingCountry = null; closeAddMenu(); }
+function closeModals(){ document.querySelectorAll('.mask.open').forEach(m => m.classList.remove('open')); editing = null; editingProj = null; editingCountry = null; editingLink = null; closeAddMenu(); }
 document.querySelectorAll('.mask').forEach(m => m.addEventListener('mousedown', e => { if (e.target === m) closeModals(); }));
 document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModals));
 
 /* ================= events ================= */
 const main = $('#main');
 document.addEventListener('click', e => {
-  const el = e.target.closest('[data-view],[data-proj],[data-editproj],[data-addproj],[data-editcountry],[data-exp],[data-addmenu],[data-newcountry],[data-newproj],[data-editfilter],[data-clearfilter],[data-resetfilters],[data-edit],[data-toggle],[data-new],[data-day],[data-shift],[data-zoom],[data-gtoday],[data-dismiss],[data-opensync],[data-hidesynctip]');
+  const el = e.target.closest('[data-view],[data-proj],[data-editproj],[data-addproj],[data-editcountry],[data-exp],[data-addmenu],[data-newcountry],[data-newproj],[data-editfilter],[data-clearfilter],[data-resetfilters],[data-newlink],[data-editlink],[data-copylink],[data-resetlinks],[data-edit],[data-toggle],[data-new],[data-day],[data-shift],[data-zoom],[data-gtoday],[data-dismiss],[data-opensync],[data-hidesynctip]');
   if (!el || el.dataset.addmenu === undefined) closeAddMenu();
   if (!el) return;
   const d = el.dataset;
@@ -1098,6 +1289,13 @@ document.addEventListener('click', e => {
   else if (d.clearfilter !== undefined) { ui.project = 'all'; saveUI(); render(); }
   else if (d.editfilter !== undefined) { ui.project.startsWith('c:') ? openCountry(ui.project.slice(2)) : openProj(ui.project); }
   else if (d.resetfilters !== undefined) { ui.fCountry = 'all'; ui.fProj = 'all'; ui.status = 'open'; ui.search = ''; saveUI(); render(); }
+  else if (d.resetlinks !== undefined) { ui.lCountry = 'all'; ui.lProj = 'all'; ui.lSearch = ''; saveUI(); render(); }
+  else if (d.newlink !== undefined) openLink(null, d.newlink ? { projectId: d.newlink } : {});
+  else if (d.editlink) openLink(d.editlink);
+  else if (d.copylink) {
+    const l = state.links.find(x => x.id === d.copylink); if (!l) return;
+    (navigator.clipboard ? navigator.clipboard.writeText(l.url) : Promise.reject()).then(() => toast('已複製網址'), () => prompt('複製這個網址：', l.url));
+  }
   else if (d.proj) {   // open that country's / project's own page
     ui.project = d.proj; ui.view = 'scope';
     if (d.proj.startsWith('c:')) delete ui.collapsed[d.proj.slice(2)];
@@ -1109,7 +1307,7 @@ document.addEventListener('click', e => {
     touch(t); save(); render();
   }
   else if (d.edit) { e.preventDefault(); openTask(d.edit); }
-  else if (d.new !== undefined) openTask(null);
+  else if (d.new !== undefined) { if (ui.view === 'links') openLink(null); else openTask(null); }
   else if (d.day) { ui.date = d.day; render(); }
   else if (d.shift) { ui.date = addDays(ui.date, +d.shift); render(); }
   else if (d.zoom) { ui.ganttW = +d.zoom; saveUI(); render(); }
@@ -1118,12 +1316,23 @@ document.addEventListener('click', e => {
   else if (d.opensync !== undefined) { e.preventDefault(); openSync(); }
   else if (d.hidesynctip !== undefined) { store.set('workmgr.hideSyncTip', true); render(); }
 });
-main.addEventListener('input', e => { if (e.target.id === 'search') { ui.search = e.target.value; render(); } });
+main.addEventListener('input', e => {
+  if (e.target.id === 'search') { ui.search = e.target.value; render(); }
+  if (e.target.id === 'lSearch') { ui.lSearch = e.target.value; render(); }
+});
+main.addEventListener('submit', e => {
+  if (e.target.id !== 'quickLink') return;
+  e.preventDefault();
+  const v = $('#quickUrl').value;
+  if (v.trim() && quickSave(v)) { const q = $('#quickUrl'); if (q) q.value = ''; }
+});
 main.addEventListener('change', e => {
   if (e.target.id === 'statusSel') { ui.status = e.target.value; saveUI(); render(); }
   if (e.target.id === 'sStatusSel') { ui.sStatus = e.target.value; saveUI(); render(); }
   if (e.target.id === 'fCountry') { ui.fCountry = e.target.value; ui.fProj = 'all'; saveUI(); render(); }
   if (e.target.id === 'fProj') { ui.fProj = e.target.value; saveUI(); render(); }
+  if (e.target.id === 'lCountry') { ui.lCountry = e.target.value; ui.lProj = 'all'; saveUI(); render(); }
+  if (e.target.id === 'lProj') { ui.lProj = e.target.value; saveUI(); render(); }
   if (e.target.id === 'showDone') { ui.showDone = e.target.checked; saveUI(); render(); }
   if (e.target.id === 'pickDay' && e.target.value) { ui.date = e.target.value; render(); }
 });
@@ -1146,8 +1355,8 @@ $('#importFile').addEventListener('change', async e => {
     const data = normalize(JSON.parse(await f.text()));
     if (!data) throw 0;
     if (!confirm(`匯入 ${data.tasks.length} 項任務、${data.projects.length} 個專案，將取代目前所有資料${syncCfg?'（雲端也會一起更新）':''}。確定？`)) return;
-    const t = now(), incoming = [...data.tasks, ...data.projects, ...data.countries], keep = new Set(incoming.map(x => x.id));
-    [...state.tasks, ...state.projects, ...state.countries].forEach(x => { if (!keep.has(x.id)) data.deleted[x.id] = t; });
+    const t = now(), incoming = [...data.tasks, ...data.projects, ...data.countries, ...data.links], keep = new Set(incoming.map(x => x.id));
+    [...state.tasks, ...state.projects, ...state.countries, ...state.links].forEach(x => { if (!keep.has(x.id)) data.deleted[x.id] = t; });
     incoming.forEach(x => { x.updatedAt = t; delete x.sample; x.createdAt = x.createdAt || new Date().toISOString(); delete data.deleted[x.id]; });
     state = data; ui.project = 'all'; save(); saveUI(); render(); toast('匯入完成');
   } catch(err) { alert('檔案格式不正確，無法匯入。'); }
