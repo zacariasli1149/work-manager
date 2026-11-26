@@ -273,6 +273,10 @@ main{height:100vh;overflow:auto;padding:22px 28px 60px}
   .two{grid-template-columns:1fr}
   .gantt-wrap{max-height:calc(100vh - 260px)}
   .field input,.field select,.field textarea,.tools input,.tools select,.daynav input{font-size:16px}
+  .tools.filters{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .tools.filters input[type=search]{grid-column:1/-1;max-width:none;min-width:0}
+  .tools.filters select{min-width:0;width:100%}
+  .tools.filters [data-resetfilters]{grid-column:1/-1}
   .mask{align-items:flex-end;padding:0}
   .modal{border-radius:18px 18px 0 0;max-height:94vh;overflow:auto;padding-bottom:env(safe-area-inset-bottom)}
   .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
@@ -428,7 +432,7 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
 /* ================= state ================= */
 const KEY = 'workmgr.data.v1', UIKEY = 'workmgr.ui.v1', SYNCKEY = 'workmgr.sync.v1';
 let state = normalize(store.get(KEY)) || seed();
-let ui = Object.assign({ view:'today', project:'all', showDone:false, search:'', status:'open', ganttW:32, collapsed:{} }, store.get(UIKEY) || {});
+let ui = Object.assign({ view:'today', project:'all', showDone:false, search:'', status:'open', ganttW:32, collapsed:{}, fCountry:'all', fProj:'all', sStatus:'open' }, store.get(UIKEY) || {});
 ui.date = todayStr();
 let lastDay = todayStr();
 
@@ -468,12 +472,15 @@ const isDone = t => t.status === 'done';
 const country = id => state.countries.find(c => c.id === id) || null;
 const projCountry = p => p ? country(p.countryId) : null;
 const looseProjects = () => state.projects.filter(p => !projCountry(p));
-function inFilter(t){
-  if (ui.project === 'all') return true;
-  if (ui.project === 'none') return !proj(t.projectId);
-  if (ui.project.startsWith('c:')) return proj(t.projectId)?.countryId === ui.project.slice(2);
-  return t.projectId === ui.project;
+// f: 'all' | 'none' (no project) | 'c:<countryId>' | '<projectId>'
+function inFilter(t, f = ui.project){
+  if (f === 'all') return true;
+  if (f === 'none') return !proj(t.projectId);
+  if (f.startsWith('c:')) return proj(t.projectId)?.countryId === f.slice(2);
+  return t.projectId === f;
 }
+// The sidebar's country/project pick only applies on its own page (view 'scope').
+const scopeSel = () => ui.view === 'scope' ? ui.project : '';
 function filterName(){
   const f = ui.project;
   if (f === 'all') return '';
@@ -484,10 +491,12 @@ function filterName(){
 }
 function validFilter(){
   const f = ui.project;
-  if (f === 'all' || f === 'none') return;
-  if (f.startsWith('c:') ? !country(f.slice(2)) : !proj(f)) ui.project = 'all';
+  const bad = f === 'all' || (f !== 'none' && (f.startsWith('c:') ? !country(f.slice(2)) : !proj(f)));
+  if (bad) { ui.project = 'all'; if (ui.view === 'scope') ui.view = 'today'; }
+  if (ui.fCountry !== 'all' && ui.fCountry !== 'none' && !country(ui.fCountry)) ui.fCountry = 'all';
+  if (ui.fProj !== 'all' && ui.fProj !== 'none' && !proj(ui.fProj)) ui.fProj = 'all';
 }
-const filtered = () => state.tasks.filter(inFilter);
+const filtered = () => state.tasks;   // today / daily / gantt always show everything
 
 /* Priority: unfinished first → nearest deadline → no deadline last → in-progress → earlier start */
 function cmp(a, b){
@@ -654,7 +663,7 @@ const VIEWS = [['today','🎯','今日焦點','今日'],['daily','📅','每日�
 function render(){
   validFilter();
   renderNav(); renderProjects();
-  const fn = { today:renderToday, daily:renderDaily, gantt:renderGantt, all:renderAll }[ui.view] || renderToday;
+  const fn = { today:renderToday, daily:renderDaily, gantt:renderGantt, all:renderAll, scope:renderScope }[ui.view] || renderToday;
   const searchFocused = document.activeElement?.id === 'search';
   const pos = searchFocused ? document.activeElement.selectionStart : 0;
   $('#main').innerHTML = banner() + fn();
@@ -680,7 +689,7 @@ function renderNav(){
 }
 function renderProjects(){
   const cnt = f => state.tasks.filter(t => !isDone(t) && f(t)).length;
-  const sel = ui.project;
+  const sel = scopeSel();
   const projRow = p => `<div class="row"><button class="p ${sel===p.id?'on':''}" data-proj="${p.id}"><span class="dot" style="background:${esc(p.color)}"></span><span class="nm">${esc(p.name)}</span><span class="cnt">${cnt(t=>t.projectId===p.id)}</span></button><button class="act" data-editproj="${p.id}" title="編輯專案">✎</button></div>`;
   const rows = [];
   state.countries.forEach(c => {
@@ -698,12 +707,12 @@ function renderProjects(){
   $('#plist').innerHTML = rows.join('');
   renderChips(cnt);
 }
-// Phone: row 1 = 全部 + countries (+ projects with no country), row 2 = projects of the picked country.
+// Phone: row 1 = countries (+ projects with no country), row 2 = projects of the picked country.
 function renderChips(cnt){
-  const sel = ui.project;
+  const sel = scopeSel();
   const chip = (attr, on, label, n, cls='') => `<button class="chip ${cls} ${on?'on':''}" ${attr}>${label}${n!=null?`<span class="cnt">${n}</span>`:''}</button>`;
   const projChip = p => chip(`data-proj="${p.id}"`, sel===p.id, `<span class="dot" style="background:${esc(p.color)}"></span>${esc(p.name)}`, cnt(t=>t.projectId===p.id));
-  let r1 = chip('data-clearfilter', sel==='all', '全部', cnt(()=>true));
+  let r1 = '';
   state.countries.forEach(c => {
     const on = sel===`c:${c.id}` || proj(sel)?.countryId === c.id;
     r1 += chip(`data-proj="c:${c.id}"`, on, `🌐 ${esc(c.name)}`, cnt(t=>proj(t.projectId)?.countryId===c.id), 'country');
@@ -720,11 +729,6 @@ function renderChips(cnt){
     r2 = `<div class="chips sub">${ps.length ? ps.map(projChip).join('') : '<span class="empty-k">此國家尚無專案</span>'}${chip(`data-addproj="${c.id}"`, false, '＋ 專案', null, 'add')}</div>`;
   }
   $('#mchips').innerHTML = `<div class="chips">${r1}</div>${r2}`;
-}
-function fbar(){
-  if (ui.project === 'all') return '';
-  const editable = ui.project !== 'none';
-  return `<div class="fbar">篩選中：<b>${esc(filterName())}</b>${editable?'<button class="btn sm" data-editfilter>✎ 編輯</button>':''}<button class="btn sm" data-clearfilter>✕ 顯示全部</button></div>`;
 }
 function banner(){
   const T = todayStr();
@@ -758,7 +762,7 @@ function taskHTML(t, ref){
     <span class="badge ${info.cls}">${info.text}</span>
   </div>`;
 }
-const header = (title, sub) => `<div class="top"><h1>${title}</h1><span class="sub">${sub||''}</span><span class="grow"></span><button class="btn primary" data-new>＋ 新增待辦</button></div>` + fbar();
+const header = (title, sub) => `<div class="top"><h1>${title}</h1><span class="sub">${sub||''}</span><span class="grow"></span><button class="btn primary" data-new>＋ 新增待辦</button></div>`;
 const projLabel = () => '';
 
 function renderToday(){
@@ -811,20 +815,61 @@ function renderDaily(){
   return h + list.map(t => taskHTML(t, D)).join('');
 }
 
+const STATUS_OPTS = [['open','未完成'],['todo','未開始'],['doing','進行中'],['done','已完成'],['all','全部狀態']];
+function byStatus(list, st){
+  list = list.filter(t => st === 'all' || (st === 'open' ? !isDone(t) : st === 'done' ? isDone(t) : st === 'doing' ? t.status === 'doing' : t.status === 'todo')).sort(cmp);
+  if (st === 'done') list.sort((a,b) => (b.doneAt||'').localeCompare(a.doneAt||''));
+  return list;
+}
+const statusSelect = (id, val) => `<select id="${id}" title="狀態">${STATUS_OPTS.map(([v,l])=>`<option value="${v}" ${val===v?'selected':''}>${l}</option>`).join('')}</select>`;
+
 function renderAll(){
   const q = ui.search.trim().toLowerCase();
-  let list = filtered().filter(t => {
-    if (ui.status === 'open' && isDone(t)) return false;
-    if (ui.status === 'done' && !isDone(t)) return false;
-    if (ui.status === 'doing' && t.status !== 'doing') return false;
+  const fc = ui.fCountry, fp = ui.fProj;
+  // projects offered in the project filter follow the chosen country
+  const projOpts = fc === 'all' ? state.projects : fc === 'none' ? looseProjects() : state.projects.filter(p => p.countryId === fc);
+  const fpOk = fp === 'all' || (fp === 'none' ? fc === 'all' || fc === 'none' : projOpts.some(p => p.id === fp));
+  const fpUse = fpOk ? fp : 'all';
+  let list = state.tasks.filter(t => {
+    const p = proj(t.projectId);
+    if (fc === 'none' && projCountry(p)) return false;
+    if (fc !== 'all' && fc !== 'none' && p?.countryId !== fc) return false;
+    if (fpUse !== 'all' && !inFilter(t, fpUse)) return false;
     return !q || (t.title + ' ' + (t.detail||'') + ' ' + pName(t)).toLowerCase().includes(q);
-  }).sort(cmp);
-  if (ui.status === 'done') list.sort((a,b) => (b.doneAt||'').localeCompare(a.doneAt||''));
-  let h = header('全部任務', `共 ${list.length} 項` + projLabel());
-  h += `<div class="tools"><input type="search" id="search" placeholder="搜尋標題、內容、專案…" value="${esc(ui.search)}">
-    <select id="statusSel">${[['open','未完成'],['doing','進行中'],['done','已完成'],['all','全部']].map(([v,l])=>`<option value="${v}" ${ui.status===v?'selected':''}>${l}</option>`).join('')}</select></div>`;
+  });
+  list = byStatus(list, ui.status);
+  const active = fc !== 'all' || fpUse !== 'all' || ui.status !== 'open' || q;
+  const opt = (v, l, cur) => `<option value="${v}" ${cur===v?'selected':''}>${esc(l)}</option>`;
+  let h = header('全部任務', `共 ${list.length} 項`);
+  h += `<div class="tools filters"><input type="search" id="search" placeholder="搜尋標題、內容、專案…" value="${esc(ui.search)}">
+    ${statusSelect('statusSel', ui.status)}
+    <select id="fCountry" title="國家">${opt('all','全部國家',fc)}${state.countries.map(c=>opt(c.id,'🌐 '+c.name,fc)).join('')}${opt('none','未指定國家',fc)}</select>
+    <select id="fProj" title="專案">${opt('all','全部專案',fpUse)}${projOpts.map(p=>opt(p.id,p.name,fpUse)).join('')}${fc==='all'||fc==='none'?opt('none','未分類',fpUse):''}</select>
+    ${active?'<button class="btn sm" data-resetfilters>✕ 清除篩選</button>':''}</div>`;
   if (!list.length) return h + `<div class="empty">沒有符合條件的任務。</div>`;
   return h + list.map(t => taskHTML(t)).join('');
+}
+
+// Page for one country / project, opened from the sidebar.
+function renderScope(){
+  const f = ui.project, isC = f.startsWith('c:');
+  const all = state.tasks.filter(t => inFilter(t, f));
+  const list = byStatus(all, ui.sStatus);
+  const openN = all.filter(t => !isDone(t)).length;
+  const sub = isC ? `${state.projects.filter(p => p.countryId === f.slice(2)).length} 個專案 · ${openN} 項未完成` : `${openN} 項未完成`;
+  let h = header((isC ? '🌐 ' : '📁 ') + esc(filterName()), sub);
+  h += `<div class="tools">${statusSelect('sStatusSel', ui.sStatus)}
+    ${f !== 'none' ? `<button class="btn sm" data-editfilter>✎ 編輯${isC?'國家':'專案'}</button>` : ''}
+    ${isC ? `<button class="btn sm" data-addproj="${f.slice(2)}">＋ 新增專案</button>` : ''}</div>`;
+  if (!list.length) return h + `<div class="empty">沒有符合條件的任務。<br><br><button class="btn primary" data-new>＋ 新增待辦</button></div>`;
+  if (!isC) return h + list.map(t => taskHTML(t)).join('');
+  // country page: group by project
+  const ps = state.projects.filter(p => p.countryId === f.slice(2));
+  ps.forEach(p => {
+    const l = list.filter(t => t.projectId === p.id);
+    if (l.length) h += `<div class="group"><h3><span class="dot" style="background:${esc(p.color)};width:9px;height:9px;border-radius:3px;display:inline-block"></span>${esc(p.name)}<span class="pill">${l.length}</span></h3>${l.map(t=>taskHTML(t)).join('')}</div>`;
+  });
+  return h;
 }
 
 let ganttScroll = 0;
@@ -897,7 +942,7 @@ function fillProjSelect(sel){
   tf.projectId.innerHTML = html;
   tf.projectId.value = sel || '';
 }
-const filterCountryId = () => ui.project.startsWith('c:') ? ui.project.slice(2) : (proj(ui.project)?.countryId || '');
+const filterCountryId = () => { const s = scopeSel(); return s.startsWith('c:') ? s.slice(2) : (proj(s)?.countryId || ''); };
 function openTask(id){
   const t = id ? state.tasks.find(x => x.id === id) : null;
   if (id && !t) return;
@@ -905,7 +950,7 @@ function openTask(id){
   $('#taskTitle').textContent = t ? '編輯待辦' : '新增待辦';
   $('#delTask').style.display = t ? '' : 'none';
   $('#taskErr').textContent = '';
-  fillProjSelect(t ? t.projectId : (proj(ui.project) ? ui.project : ''));
+  fillProjSelect(t ? t.projectId : (proj(scopeSel()) ? scopeSel() : ''));
   tf.title.value = t?.title || '';
   tf.start.value = t ? startOf(t) : (ui.view === 'daily' && ui.date > todayStr() ? ui.date : todayStr());
   tf.due.value = t?.due || '';
@@ -1038,7 +1083,7 @@ document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click
 /* ================= events ================= */
 const main = $('#main');
 document.addEventListener('click', e => {
-  const el = e.target.closest('[data-view],[data-proj],[data-editproj],[data-addproj],[data-editcountry],[data-exp],[data-addmenu],[data-newcountry],[data-newproj],[data-editfilter],[data-clearfilter],[data-edit],[data-toggle],[data-new],[data-day],[data-shift],[data-zoom],[data-gtoday],[data-dismiss],[data-opensync],[data-hidesynctip]');
+  const el = e.target.closest('[data-view],[data-proj],[data-editproj],[data-addproj],[data-editcountry],[data-exp],[data-addmenu],[data-newcountry],[data-newproj],[data-editfilter],[data-clearfilter],[data-resetfilters],[data-edit],[data-toggle],[data-new],[data-day],[data-shift],[data-zoom],[data-gtoday],[data-dismiss],[data-opensync],[data-hidesynctip]');
   if (!el || el.dataset.addmenu === undefined) closeAddMenu();
   if (!el) return;
   const d = el.dataset;
@@ -1052,10 +1097,11 @@ document.addEventListener('click', e => {
   else if (d.exp) { if (ui.collapsed[d.exp]) delete ui.collapsed[d.exp]; else ui.collapsed[d.exp] = true; saveUI(); renderProjects(); }
   else if (d.clearfilter !== undefined) { ui.project = 'all'; saveUI(); render(); }
   else if (d.editfilter !== undefined) { ui.project.startsWith('c:') ? openCountry(ui.project.slice(2)) : openProj(ui.project); }
-  else if (d.proj) {
-    ui.project = ui.project === d.proj ? 'all' : d.proj;   // click the selected one again → show everything
-    if (d.proj.startsWith('c:') && ui.project === d.proj) delete ui.collapsed[d.proj.slice(2)];
-    saveUI(); render();
+  else if (d.resetfilters !== undefined) { ui.fCountry = 'all'; ui.fProj = 'all'; ui.status = 'open'; ui.search = ''; saveUI(); render(); }
+  else if (d.proj) {   // open that country's / project's own page
+    ui.project = d.proj; ui.view = 'scope';
+    if (d.proj.startsWith('c:')) delete ui.collapsed[d.proj.slice(2)];
+    saveUI(); render(); main.scrollTop = 0; scrollTo(0,0);
   }
   else if (d.toggle) {
     const t = state.tasks.find(x => x.id === d.toggle); if (!t) return;
@@ -1075,6 +1121,9 @@ document.addEventListener('click', e => {
 main.addEventListener('input', e => { if (e.target.id === 'search') { ui.search = e.target.value; render(); } });
 main.addEventListener('change', e => {
   if (e.target.id === 'statusSel') { ui.status = e.target.value; saveUI(); render(); }
+  if (e.target.id === 'sStatusSel') { ui.sStatus = e.target.value; saveUI(); render(); }
+  if (e.target.id === 'fCountry') { ui.fCountry = e.target.value; ui.fProj = 'all'; saveUI(); render(); }
+  if (e.target.id === 'fProj') { ui.fProj = e.target.value; saveUI(); render(); }
   if (e.target.id === 'showDone') { ui.showDone = e.target.checked; saveUI(); render(); }
   if (e.target.id === 'pickDay' && e.target.value) { ui.date = e.target.value; render(); }
 });
