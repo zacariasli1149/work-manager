@@ -1,0 +1,989 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#4f46e5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="工作管理">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>工作管理系統</title>
+<style>
+:root{
+  --bg:#f5f6fa;--panel:#ffffff;--panel-2:#fafbfd;--text:#1d2130;--muted:#6b7285;--line:#e4e6ee;
+  --accent:#4f46e5;--accent-weak:#eef0ff;
+  --red:#dc2626;--red-weak:#fdecec;--orange:#d97706;--orange-weak:#fff3df;
+  --green:#16a34a;--green-weak:#e7f6ec;--blue:#2563eb;--blue-weak:#e8efff;
+  --weekend:rgba(100,110,140,.07);--shadow:0 1px 2px rgba(16,24,40,.05),0 2px 6px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#12141b;--panel:#1b1e27;--panel-2:#20242f;--text:#e7e9f0;--muted:#9097aa;--line:#2c3140;
+    --accent:#8b85ff;--accent-weak:#272a45;
+    --red:#f87171;--red-weak:#3a2024;--orange:#fbbf24;--orange-weak:#3a3020;
+    --green:#4ade80;--green-weak:#1d3326;--blue:#60a5fa;--blue-weak:#1d2a40;
+    --weekend:rgba(255,255,255,.035);--shadow:0 1px 2px rgba(0,0,0,.3);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font:14px/1.5 "Segoe UI","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;display:grid;grid-template-columns:250px 1fr}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+
+/* ---------- sidebar ---------- */
+aside{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;height:100vh;overflow:auto}
+.brand{padding:18px 14px 12px 18px;font-weight:700;font-size:17px;display:flex;align-items:center;gap:10px}
+.brand .logo{width:28px;height:28px;border-radius:8px;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:15px;flex:none}
+.brand .name{flex:1;white-space:nowrap}
+.sync{border:1px solid var(--line);background:var(--panel-2);border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.sync::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.sync.ok{color:var(--green)}.sync.ok::before{background:var(--green)}
+.sync.busy{color:var(--blue)}.sync.busy::before{background:var(--blue);animation:blink 1s infinite}
+.sync.err{color:var(--red)}.sync.err::before{background:var(--red)}
+@keyframes blink{50%{opacity:.2}}
+.nav{padding:4px 10px;display:flex;flex-direction:column;gap:2px}
+.nav button,.plist button.p{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:8px 10px;border-radius:8px;text-align:left;color:var(--text)}
+.nav button:hover,.plist button.p:hover{background:var(--panel-2)}
+.nav button.on,.plist button.p.on{background:var(--accent-weak);color:var(--accent);font-weight:600}
+.nav .ic{width:18px;text-align:center}
+.nav .cnt,.plist .cnt{margin-left:auto;font-size:12px;color:var(--muted);font-weight:500}
+.cnt.hot{background:var(--red);color:#fff !important;border-radius:10px;padding:0 7px}
+.sec{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 6px;font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.04em}
+.sec button{border:0;background:none;color:var(--accent);font-size:18px;line-height:1;padding:0 4px}
+.plist{padding:0 10px;display:flex;flex-direction:column;gap:2px}
+.plist .row{position:relative}
+.plist .dot{width:10px;height:10px;border-radius:3px;flex:none}
+.plist .edit{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:var(--panel);border-radius:6px;padding:2px 6px;color:var(--muted);display:none}
+.plist .row:hover .edit{display:block}
+.plist .row:hover .cnt{visibility:hidden}
+.side-foot{margin-top:auto;padding:14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.side-foot button{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:7px 10px;text-align:left;font-size:13px;color:var(--muted)}
+.side-foot button:hover{color:var(--text);border-color:var(--muted)}
+.side-foot small{color:var(--muted);font-size:11.5px;line-height:1.4}
+.tabbar,.fab,.plist .mobile-only{display:none}
+
+/* ---------- main ---------- */
+main{height:100vh;overflow:auto;padding:22px 28px 60px}
+.top{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.top h1{margin:0;font-size:22px}
+.top .sub{color:var(--muted)}
+.top .grow{flex:1}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:7px 12px}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--red)}
+.btn.sm{padding:4px 10px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:default}
+
+.banner{display:flex;gap:12px;align-items:flex-start;background:var(--red-weak);border:1px solid color-mix(in srgb,var(--red) 35%,transparent);color:var(--text);border-radius:12px;padding:12px 16px;margin-bottom:18px}
+.banner .big{font-size:20px;line-height:1.2}
+.banner b{color:var(--red)}
+.banner ul{margin:4px 0 0;padding-left:18px}
+.banner .x{margin-left:auto;border:0;background:none;color:var(--muted);font-size:18px}
+.banner.info{background:var(--blue-weak);border-color:color-mix(in srgb,var(--blue) 30%,transparent)}
+.banner.info b{color:var(--blue)}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px;box-shadow:var(--shadow)}
+.stat .n{font-size:26px;font-weight:700;line-height:1.2}
+.stat .l{color:var(--muted);font-size:12.5px}
+.stat.r .n{color:var(--red)}.stat.o .n{color:var(--orange)}.stat.b .n{color:var(--blue)}
+
+.next{background:linear-gradient(135deg,var(--accent) 0%,color-mix(in srgb,var(--accent) 70%,#000) 100%);color:#fff;border-radius:14px;padding:16px 20px;margin-bottom:22px;cursor:pointer;box-shadow:var(--shadow)}
+.next .k{font-size:12px;opacity:.85;letter-spacing:.05em}
+.next .t{font-size:18px;font-weight:700;margin:2px 0 4px}
+.next .m{font-size:13px;opacity:.9}
+
+.group{margin-bottom:22px}
+.group h3{font-size:13px;margin:0 0 8px;display:flex;align-items:center;gap:8px;color:var(--muted)}
+.group h3 .pill{font-size:11.5px;border-radius:10px;padding:0 8px;background:var(--panel-2);border:1px solid var(--line)}
+.group.overdue h3,.group.today h3{color:var(--red)}.group.soon h3{color:var(--orange)}
+
+.task{display:flex;align-items:flex-start;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 14px;margin-bottom:8px;box-shadow:var(--shadow);border-left:4px solid var(--c,var(--line))}
+.task.u-today{background:color-mix(in srgb,var(--red-weak) 60%,var(--panel));border-color:color-mix(in srgb,var(--red) 45%,transparent);border-left-color:var(--red)}
+.task.u-overdue{border-left-color:var(--red)}
+.task.is-done{opacity:.55}
+.task.is-done .tt{text-decoration:line-through}
+.check{flex:none;width:22px;height:22px;border-radius:6px;border:2px solid var(--muted);background:none;margin-top:1px;display:grid;place-items:center;color:transparent;font-size:12px;padding:0}
+.check:hover{border-color:var(--green)}
+.is-done .check{background:var(--green);border-color:var(--green);color:#fff}
+.task .body{flex:1;min-width:0;cursor:pointer}
+.tt{font-weight:600;font-size:14.5px;word-break:break-word}
+.meta{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--muted);font-size:12.5px;margin-top:3px;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:5px}
+.chip::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c)}
+.tag{font-size:11.5px;border-radius:5px;padding:0 6px;background:var(--blue-weak);color:var(--blue)}
+.detail{color:var(--muted);font-size:12.5px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{flex:none;font-size:12px;font-weight:600;border-radius:999px;padding:2px 10px;white-space:nowrap;background:var(--panel-2);color:var(--muted);border:1px solid var(--line)}
+.badge.overdue{background:var(--red);color:#fff;border-color:var(--red)}
+.badge.today{background:var(--red);color:#fff;border-color:var(--red);animation:pulse 1.6s ease-in-out infinite}
+.badge.soon{background:var(--orange-weak);color:var(--orange);border-color:transparent}
+.badge.ok,.badge.done{background:var(--green-weak);color:var(--green);border-color:transparent}
+@keyframes pulse{50%{box-shadow:0 0 0 5px color-mix(in srgb,var(--red) 25%,transparent)}}
+@media (prefers-reduced-motion:reduce){.badge.today,.sync.busy::before{animation:none}}
+.empty{text-align:center;color:var(--muted);padding:50px 20px;border:1px dashed var(--line);border-radius:12px;background:var(--panel)}
+
+/* daily */
+.daynav{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.daynav input[type=date]{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:5px 8px}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:20px}
+.wd{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 4px;text-align:center;cursor:pointer;position:relative}
+.wd:hover{border-color:var(--muted)}
+.wd .w{font-size:12px;color:var(--muted)}
+.wd .d{font-size:18px;font-weight:700}
+.wd .c{font-size:11.5px;color:var(--muted)}
+.wd.sel{border-color:var(--accent);background:var(--accent-weak)}
+.wd.sel .d{color:var(--accent)}
+.wd.is-today .w{color:var(--accent);font-weight:700}
+.wd .dl{position:absolute;top:5px;right:5px;font-size:10.5px;background:var(--red);color:#fff;border-radius:8px;padding:0 5px}
+
+/* all */
+.tools{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.tools input[type=search],.tools select{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 10px}
+.tools input[type=search]{min-width:220px;flex:1;max-width:360px}
+.tools label{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
+
+/* gantt */
+.gantt-wrap{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:calc(100vh - 170px);box-shadow:var(--shadow)}
+.gantt{position:relative}
+.g-head{position:sticky;top:0;z-index:6;display:flex;background:var(--panel);border-bottom:1px solid var(--line)}
+.g-corner{position:sticky;left:0;z-index:7;background:var(--panel);border-right:1px solid var(--line);flex:none;display:flex;align-items:flex-end;padding:6px 12px;font-size:12px;color:var(--muted);font-weight:600}
+.g-cal{flex:none}
+.g-months,.g-days{display:flex}
+.g-months div{font-size:12px;font-weight:600;padding:4px 8px;border-left:1px solid var(--line);white-space:nowrap;overflow:hidden}
+.g-days div{flex:none;text-align:center;font-size:11px;color:var(--muted);padding:2px 0 4px;line-height:1.25}
+.g-days div.we{background:var(--weekend)}
+.g-days div.td{background:var(--accent);color:#fff;border-radius:6px 6px 0 0;font-weight:700}
+.g-body{position:relative}
+.g-grid{position:absolute;top:0;bottom:0;z-index:0;pointer-events:none}
+.g-grid .we{position:absolute;top:0;bottom:0;background:var(--weekend)}
+.g-grid .now{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);opacity:.7}
+.g-row{display:flex;height:40px;border-bottom:1px solid var(--line);position:relative}
+.g-row:hover .g-label{background:var(--panel-2)}
+.g-label{position:sticky;left:0;z-index:4;background:var(--panel);border-right:1px solid var(--line);flex:none;padding:0 12px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;min-width:0}
+.g-label .a{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-label .b{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-label .b.r{color:var(--red);font-weight:600}
+.g-track{flex:none;position:relative;z-index:1}
+.g-grp{height:32px;background:var(--panel-2)}
+.g-grp .g-label{background:var(--panel-2);flex-direction:row;align-items:center;justify-content:flex-start;gap:8px;font-weight:700;font-size:13px;cursor:default}
+.g-grp .g-label i{width:10px;height:10px;border-radius:3px;background:var(--c);flex:none}
+.bar{position:absolute;top:9px;height:22px;border-radius:6px;background:var(--c);color:#fff;font-size:11.5px;font-weight:600;padding:0 8px;white-space:nowrap;overflow:hidden;display:flex;align-items:center;cursor:pointer;z-index:2;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.bar:hover{filter:brightness(1.1)}
+.bar.done{opacity:.4}
+.bar.today{outline:2px solid var(--red);outline-offset:2px}
+.bar.doing{background:repeating-linear-gradient(45deg,var(--c) 0 8px,color-mix(in srgb,var(--c) 80%,#fff) 8px 16px)}
+.ext{position:absolute;top:13px;height:14px;border-radius:0 6px 6px 0;background:repeating-linear-gradient(45deg,var(--red) 0 5px,transparent 5px 10px);border:1px solid var(--red);z-index:1}
+.legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:12.5px;margin:10px 2px 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:18px;height:10px;border-radius:3px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--panel);padding:5px 10px;font-size:13px}
+.seg button.on{background:var(--accent-weak);color:var(--accent);font-weight:600}
+
+/* modal */
+.mask{position:fixed;inset:0;background:rgba(10,12,20,.45);display:none;align-items:flex-start;justify-content:center;padding:60px 16px;z-index:50;overflow:auto}
+.mask.open{display:flex}
+.modal{background:var(--panel);border-radius:14px;width:100%;max-width:560px;box-shadow:0 20px 60px rgba(0,0,0,.25);border:1px solid var(--line)}
+.modal header{padding:16px 20px;border-bottom:1px solid var(--line);font-weight:700;font-size:16px;display:flex;justify-content:space-between;align-items:center}
+.modal header button{border:0;background:none;font-size:22px;color:var(--muted);line-height:1}
+.modal .content{padding:16px 20px;display:grid;gap:14px}
+.modal footer{padding:12px 20px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.modal footer .left{margin-right:auto}
+.field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);background:var(--panel-2);border-radius:8px;padding:8px 10px}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid color-mix(in srgb,var(--accent) 40%,transparent);border-color:var(--accent)}
+.field textarea{min-height:120px;resize:vertical}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.inline{display:flex;gap:6px}
+.inline select{flex:1}
+.hint{font-size:12.5px;color:var(--muted)}
+.hint b{color:var(--accent)}
+.hint a{color:var(--accent)}
+.hint ol{margin:4px 0 0;padding-left:18px}
+.err{color:var(--red);font-size:12.5px}
+.okmsg{color:var(--green);font-size:12.5px}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.swatches button{width:30px;height:30px;border-radius:8px;border:2px solid transparent;background:var(--c)}
+.swatches button.on{border-color:var(--text)}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 16px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:60}
+.toast.show{opacity:1}
+
+/* ---------- phone ---------- */
+@media (max-width:820px){
+  body{display:block;padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+  aside{position:sticky;top:0;z-index:20;height:auto;border-right:0;border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
+  .brand{padding:10px 14px 6px}
+  .nav,.sec,.side-foot{display:none}
+  .plist{flex-direction:row;overflow-x:auto;padding:2px 12px 10px;gap:6px;scrollbar-width:none}
+  .plist::-webkit-scrollbar{display:none}
+  .plist .row{flex:none}
+  .plist .mobile-only{display:block}
+  .plist .mobile-only button.p{border-style:dashed;color:var(--accent)}
+  .plist button.p{border:1px solid var(--line);border-radius:999px;padding:4px 12px;white-space:nowrap;font-size:13px}
+  .plist .cnt{margin-left:4px}
+  .plist .edit{display:none !important}
+  .plist .row:hover .cnt{visibility:visible}
+  main{height:auto;overflow:visible;padding:14px 14px 90px}
+  .top{margin-bottom:12px}
+  .top h1{font-size:20px}
+  .top .sub{width:100%;order:3;font-size:12.5px}
+  .top [data-new]{display:none}
+  .stats{grid-template-columns:repeat(4,1fr);gap:6px}
+  .stat{padding:8px 6px;text-align:center}
+  .stat .n{font-size:20px}.stat .l{font-size:11px}
+  .next{padding:14px 16px}
+  .task{padding:10px 12px;gap:10px;flex-wrap:wrap}
+  .task .body{flex:1 1 calc(100% - 40px)}
+  .task .badge{margin-left:32px}
+  .week{gap:4px}.wd{padding:6px 0}.wd .d{font-size:14px}.wd .c{display:none}.wd .w{font-size:11px}
+  .daynav .btn[data-shift="-7"],.daynav .btn[data-shift="7"]{display:none}
+  .daynav input[type=date]{flex:1}
+  .two{grid-template-columns:1fr}
+  .gantt-wrap{max-height:calc(100vh - 260px)}
+  .field input,.field select,.field textarea,.tools input,.tools select,.daynav input{font-size:16px}
+  .mask{align-items:flex-end;padding:0}
+  .modal{border-radius:18px 18px 0 0;max-height:94vh;overflow:auto;padding-bottom:env(safe-area-inset-bottom)}
+  .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+  .tabbar button{flex:1;border:0;background:none;padding:8px 0 7px;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:11px;color:var(--muted);position:relative}
+  .tabbar button .ic{font-size:19px;line-height:1.2}
+  .tabbar button.on{color:var(--accent);font-weight:700}
+  .tabbar .cnt{position:absolute;top:3px;left:calc(50% + 6px);font-size:10px;padding:0 5px}
+  .tabbar .cnt:not(.hot){display:none}
+  .fab{display:grid;place-items:center;position:fixed;right:18px;bottom:calc(76px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:28px;box-shadow:0 6px 18px rgba(79,70,229,.45);z-index:31}
+  .toast{bottom:calc(140px + env(safe-area-inset-bottom))}
+}
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand"><span class="logo">✓</span><span class="name">工作管理系統</span><button class="sync" id="syncBtn" title="雲端同步設定">未同步</button></div>
+  <nav class="nav" id="nav"></nav>
+  <div class="sec">專案 <button id="addProj" title="新增專案">＋</button></div>
+  <div class="plist" id="plist"></div>
+  <div class="side-foot">
+    <button id="syncSetBtn">☁ 雲端同步設定</button>
+    <button id="notifyBtn">🔔 開啟桌面提醒</button>
+    <button id="exportBtn">⬇ 匯出備份 (JSON)</button>
+    <button id="importBtn">⬆ 匯入備份</button>
+    <input type="file" id="importFile" accept=".json,application/json" hidden>
+    <small>快捷鍵：<b>N</b> 新增待辦</small>
+  </div>
+</aside>
+<main id="main"></main>
+<nav class="tabbar" id="tabbar"></nav>
+<button class="fab" data-new aria-label="新增待辦">＋</button>
+
+<!-- task modal -->
+<div class="mask" id="taskMask">
+  <form class="modal" id="taskForm" autocomplete="off">
+    <header><span id="taskTitle">新增待辦</span><button type="button" data-close aria-label="關閉">×</button></header>
+    <div class="content">
+      <div class="field"><label>標題 *</label><input name="title" required maxlength="120" placeholder="例如：完成 Q4 報表"></div>
+      <div class="field"><label>專案</label>
+        <div class="inline"><select name="projectId"></select><button type="button" class="btn sm" id="quickProj">＋ 新專案</button></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>開始日期（填寫日）</label><input type="date" name="start" required></div>
+        <div class="field"><label>預計完成日（Deadline）</label><input type="date" name="due"></div>
+      </div>
+      <div class="hint" id="durHint"></div>
+      <div class="field"><label>狀態</label>
+        <select name="status"><option value="todo">待辦</option><option value="doing">進行中</option><option value="done">已完成</option></select>
+      </div>
+      <div class="field"><label>詳細內容</label><textarea name="detail" placeholder="細節、步驟、聯絡人、連結…"></textarea></div>
+      <div class="err" id="taskErr"></div>
+    </div>
+    <footer>
+      <button type="button" class="btn danger left" id="delTask">刪除</button>
+      <button type="button" class="btn" data-close>取消</button>
+      <button type="submit" class="btn primary">儲存</button>
+    </footer>
+  </form>
+</div>
+
+<!-- project modal -->
+<div class="mask" id="projMask">
+  <form class="modal" id="projForm" autocomplete="off" style="max-width:420px">
+    <header><span id="projTitle">新增專案</span><button type="button" data-close aria-label="關閉">×</button></header>
+    <div class="content">
+      <div class="field"><label>專案名稱 *</label><input name="name" required maxlength="40"></div>
+      <div class="field"><label>顏色</label><div class="swatches" id="swatches"></div></div>
+    </div>
+    <footer>
+      <button type="button" class="btn danger left" id="delProj">刪除專案</button>
+      <button type="button" class="btn" data-close>取消</button>
+      <button type="submit" class="btn primary">儲存</button>
+    </footer>
+  </form>
+</div>
+
+<!-- sync modal -->
+<div class="mask" id="syncMask">
+  <form class="modal" id="syncForm" autocomplete="off" style="max-width:480px">
+    <header><span>☁ 雲端同步（GitHub）</span><button type="button" data-close aria-label="關閉">×</button></header>
+    <div class="content">
+      <div class="hint">資料會存在你自己 GitHub 的<b>私人 repo</b>（data.json）。每台裝置（電腦、手機）各設定一次，之後就會自動同步。</div>
+      <div class="two">
+        <div class="field"><label>GitHub 帳號</label><input name="owner" placeholder="your-username" autocapitalize="off" spellcheck="false"></div>
+        <div class="field"><label>資料 repo 名稱</label><input name="repo" placeholder="work-manager-data" autocapitalize="off" spellcheck="false"></div>
+      </div>
+      <div class="field"><label>Access Token</label><input name="token" type="password" placeholder="github_pat_…" autocapitalize="off" spellcheck="false"></div>
+      <div class="hint">Token 建立方式：<a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub → Fine-grained token</a>
+        <ol><li>Repository access 選 <b>Only select repositories</b> → 選資料 repo</li><li>Permissions → Repository → <b>Contents：Read and write</b></li><li>建立後複製貼到上方</li></ol>
+        Token 只會存在這台裝置上，不會出現在網站程式碼裡。</div>
+      <div id="syncMsg"></div>
+      <div class="hint" id="syncInfo"></div>
+    </div>
+    <footer>
+      <button type="button" class="btn danger left" id="syncOff">中斷同步</button>
+      <button type="button" class="btn" id="syncNow">立即同步</button>
+      <button type="submit" class="btn primary">連線並儲存</button>
+    </footer>
+  </form>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+'use strict';
+/* ================= utils ================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
+const pad = n => String(n).padStart(2, '0');
+const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const todayStr = () => fmt(new Date());
+const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate()+n); return fmt(d); };
+const diff = (a, b) => Math.round((parse(b) - parse(a)) / 86400000); // b - a (days)
+const WD = '日一二三四五六';
+const md = s => { const d = parse(s); return `${d.getMonth()+1}/${d.getDate()}`; };
+const mdw = s => { const d = parse(s); return `${d.getMonth()+1}/${d.getDate()} (${WD[d.getDay()]})`; };
+const fullDate = s => { const d = parse(s); return `${d.getFullYear()} 年 ${d.getMonth()+1} 月 ${d.getDate()} 日（週${WD[d.getDay()]}）`; };
+const hm = ts => { const d = new Date(ts); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const COLORS = ['#4f46e5','#0891b2','#16a34a','#d97706','#db2777','#7c3aed','#dc2626','#475569','#0d9488','#ea580c'];
+const NONE_COLOR = '#94a3b8';
+const now = () => Date.now();
+const store = {
+  get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } },
+  set(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} },
+  del(k){ try { localStorage.removeItem(k); } catch(e){} }
+};
+let toastT;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('show'), 2200); }
+
+/* ================= state ================= */
+const KEY = 'workmgr.data.v1', UIKEY = 'workmgr.ui.v1', SYNCKEY = 'workmgr.sync.v1';
+let state = normalize(store.get(KEY)) || seed();
+let ui = Object.assign({ view:'today', project:'all', showDone:false, search:'', status:'open', ganttW:32 }, store.get(UIKEY) || {});
+ui.date = todayStr();
+let lastDay = todayStr();
+
+function normalize(s){
+  if (!s || !Array.isArray(s.tasks) || !Array.isArray(s.projects)) return null;
+  s.deleted = s.deleted && typeof s.deleted === 'object' ? s.deleted : {};
+  return s;
+}
+function seed(){
+  const T = todayStr(), p1 = uid(), p2 = uid();
+  const mk = (title, projectId, s, d, status='todo', detail='') => ({ id:uid(), title, detail, projectId, start:addDays(T,s), due:addDays(T,d), status, createdAt:new Date().toISOString(), doneAt:null, updatedAt:0, sample:true });
+  return {
+    projects:[{id:p1,name:'範例專案 A',color:COLORS[0],createdAt:'0',updatedAt:0,sample:true},{id:p2,name:'範例專案 B',color:COLORS[3],createdAt:'1',updatedAt:0,sample:true}],
+    tasks:[
+      mk('（範例）今天截止的工作', p1, -4, 0, 'doing', '這是範例，可以直接刪除。\nDeadline 當天會顯示「今天最後一天」。'),
+      mk('（範例）已逾期的工作', p2, -6, -1),
+      mk('（範例）兩天後到期', p1, -1, 2),
+      mk('（範例）下週的長期任務', p2, 0, 10, 'todo', '甘特圖會顯示從開始日到 Deadline 的完整期間。'),
+    ],
+    deleted:{}
+  };
+}
+function saveLocal(){ store.set(KEY, state); }
+function save(){ saveLocal(); scheduleSync(); }
+function saveUI(){ const { date, ...rest } = ui; store.set(UIKEY, rest); }
+const touch = o => { o.updatedAt = now(); delete o.sample; return o; };
+function removeTask(t){ state.tasks = state.tasks.filter(x => x !== t); state.deleted[t.id] = now(); }
+
+const proj = id => state.projects.find(p => p.id === id) || null;
+const pName = t => proj(t.projectId)?.name || '未分類';
+const pColor = t => proj(t.projectId)?.color || NONE_COLOR;
+const startOf = t => t.start || (t.createdAt || '').slice(0,10) || todayStr();
+const isDone = t => t.status === 'done';
+
+function inFilter(t){
+  if (ui.project === 'all') return true;
+  if (ui.project === 'none') return !proj(t.projectId);
+  return t.projectId === ui.project;
+}
+const filtered = () => state.tasks.filter(inFilter);
+
+/* Priority: unfinished first → nearest deadline → no deadline last → in-progress → earlier start */
+function cmp(a, b){
+  if (isDone(a) !== isDone(b)) return isDone(a) ? 1 : -1;
+  if (a.due && b.due && a.due !== b.due) return a.due < b.due ? -1 : 1;
+  if (!!a.due !== !!b.due) return a.due ? -1 : 1;
+  if (a.status !== b.status) { if (a.status === 'doing') return -1; if (b.status === 'doing') return 1; }
+  return startOf(a) < startOf(b) ? -1 : startOf(a) > startOf(b) ? 1 : 0;
+}
+function dueInfo(t, ref = todayStr()){
+  if (isDone(t)) return { cls:'done', text:'已完成', key:'done' };
+  if (!t.due) return { cls:'', text:'無截止日', key:'nodue' };
+  const d = diff(ref, t.due);
+  if (d < 0) return { cls:'overdue', text:`逾期 ${-d} 天`, key:'overdue' };
+  if (d === 0) return { cls:'today', text:'⚠ 今天最後一天', key:'today' };
+  if (d === 1) return { cls:'soon', text:'明天截止', key:'soon' };
+  if (d <= 3) return { cls:'soon', text:`剩 ${d} 天`, key:'soon' };
+  return { cls:'ok', text:`剩 ${d} 天`, key: d <= 7 ? 'week' : 'later' };
+}
+
+/* ================= cloud sync (GitHub private repo) ================= */
+let syncCfg = store.get(SYNCKEY);   // {owner, repo, token, lastSync}
+let syncing = false, syncAgain = false, syncTimer = null, syncState = { cls:'', text:'未同步' };
+const FILE = 'data.json';
+
+const b64enc = s => { const b = new TextEncoder().encode(s); let bin = ''; for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(bin); };
+const b64dec = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, '')), c => c.charCodeAt(0)));
+
+async function ghFetch(cfg, path, opts = {}){
+  const res = await fetch(`https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}${path}`, {
+    cache:'no-store', ...opts,
+    headers:{ 'Accept':'application/vnd.github+json', 'Authorization':`Bearer ${cfg.token}`, 'X-GitHub-Api-Version':'2022-11-28', ...(opts.body ? {'Content-Type':'application/json'} : {}) }
+  });
+  if (!res.ok && res.status !== 404) { const e = new Error('HTTP ' + res.status); e.status = res.status; throw e; }
+  return res;
+}
+async function pullRemote(cfg){
+  const res = await ghFetch(cfg, `/contents/${FILE}?t=${now()}`);
+  if (res.status === 404) return { data:null, sha:null };
+  const j = await res.json();
+  let text;
+  if (j.content) text = b64dec(j.content);
+  else { // >1MB files come without inline content
+    const raw = await ghFetch(cfg, `/git/blobs/${j.sha}`); text = b64dec((await raw.json()).content);
+  }
+  return { data: normalize(JSON.parse(text)), sha: j.sha };
+}
+async function pushRemote(cfg, data, sha){
+  const body = { message:`update ${new Date().toISOString()}`, content: b64enc(JSON.stringify(data, null, 1)) };
+  if (sha) body.sha = sha;
+  const res = await ghFetch(cfg, `/contents/${FILE}`, { method:'PUT', body: JSON.stringify(body) });
+  if (res.status === 404) { const e = new Error('repo not found'); e.status = 404; throw e; }
+  return (await res.json()).content.sha;
+}
+
+/* Merge two copies item-by-item: newest updatedAt wins; deletions (tombstones) win over older edits */
+function merge(a, b){
+  const deleted = { ...a.deleted };
+  for (const [id, ts] of Object.entries(b.deleted || {})) deleted[id] = Math.max(deleted[id] || 0, ts);
+  const mergeList = (x, y) => {
+    const m = new Map();
+    [...x, ...y].forEach(it => { const cur = m.get(it.id); if (!cur || (it.updatedAt || 0) > (cur.updatedAt || 0)) m.set(it.id, it); });
+    return [...m.values()].filter(it => !(deleted[it.id] >= (it.updatedAt || 0)))
+      .sort((p, q) => String(p.createdAt||'').localeCompare(String(q.createdAt||'')) || p.id.localeCompare(q.id));
+  };
+  // drop tombstones older than 90 days to keep the file small
+  const cutoff = now() - 90 * 86400000;
+  for (const id in deleted) if (deleted[id] < cutoff) delete deleted[id];
+  return { projects: mergeList(a.projects, b.projects), tasks: mergeList(a.tasks, b.tasks), deleted };
+}
+const sameData = (a, b) => !!a && !!b && JSON.stringify(a) === JSON.stringify(b);
+
+function setSync(cls, text){ syncState = { cls, text }; const b = $('#syncBtn'); b.className = 'sync ' + cls; b.textContent = text; }
+function refreshSyncBadge(){
+  if (!syncCfg) return setSync('', '未同步');
+  if (!navigator.onLine) return setSync('err', '離線');
+  if (syncCfg.lastSync) setSync('ok', '已同步 ' + hm(syncCfg.lastSync));
+}
+function scheduleSync(delay = 1200){
+  if (!syncCfg) return;
+  clearTimeout(syncTimer);
+  setSync('busy', '待同步');
+  syncTimer = setTimeout(syncNow, delay);
+}
+async function syncNow(){
+  if (!syncCfg) return;
+  if (syncing) { syncAgain = true; return; }
+  if (!navigator.onLine) { setSync('err', '離線（稍後同步）'); return; }
+  syncing = true; setSync('busy', '同步中…');
+  try {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { data: remote, sha } = await pullRemote(syncCfg);
+      const before = JSON.stringify(state);
+      const merged = remote ? merge(state, remote) : merge(state, { projects:[], tasks:[], deleted:{} });
+      if (JSON.stringify(merged) !== before) { state = merged; saveLocal(); render(); }
+      if (sameData(merged, remote)) break;
+      try { await pushRemote(syncCfg, merged, sha); break; }
+      catch (e) { if (e.status === 409 || e.status === 422) continue; throw e; } // someone else saved first → pull & merge again
+    }
+    syncCfg.lastSync = now(); store.set(SYNCKEY, syncCfg);
+    setSync('ok', '已同步 ' + hm(syncCfg.lastSync));
+  } catch (e) {
+    const msg = e.status === 401 ? 'Token 無效或過期' : e.status === 403 ? 'Token 權限不足' : e.status === 404 ? '找不到資料 repo' : '同步失敗';
+    setSync('err', msg);
+  } finally {
+    syncing = false;
+    if (syncAgain) { syncAgain = false; syncNow(); }
+  }
+}
+
+/* sync settings dialog */
+const sf = $('#syncForm');
+function openSync(){
+  sf.owner.value = syncCfg?.owner || '';
+  sf.repo.value = syncCfg?.repo || 'work-manager-data';
+  sf.token.value = syncCfg?.token || '';
+  $('#syncMsg').innerHTML = '';
+  $('#syncOff').style.display = syncCfg ? '' : 'none';
+  $('#syncNow').style.display = syncCfg ? '' : 'none';
+  $('#syncInfo').textContent = syncCfg ? `目前狀態：${syncState.text}${syncCfg.lastSync ? '（最後同步 ' + new Date(syncCfg.lastSync).toLocaleString() + '）' : ''}` : '';
+  $('#syncMask').classList.add('open');
+}
+sf.addEventListener('submit', async e => {
+  e.preventDefault();
+  const cfg = { owner: sf.owner.value.trim(), repo: sf.repo.value.trim(), token: sf.token.value.trim() };
+  const msg = $('#syncMsg');
+  if (!cfg.owner || !cfg.repo || !cfg.token) { msg.innerHTML = '<div class="err">三個欄位都要填</div>'; return; }
+  msg.innerHTML = '<div class="hint">連線中…</div>';
+  try {
+    const r = await ghFetch(cfg, '');
+    if (r.status === 404) throw Object.assign(new Error(), { status:404 });
+    const repo = await r.json();
+    if (!repo.private) { msg.innerHTML = '<div class="err">⚠ 這個 repo 是<b>公開</b>的，任何人都看得到你的資料。請到 GitHub 把它改成 Private 後再連線。</div>'; return; }
+    const { data: remote } = await pullRemote(cfg);
+    const firstTime = !syncCfg || syncCfg.owner !== cfg.owner || syncCfg.repo !== cfg.repo;
+    if (firstTime && remote && remote.tasks.length) {
+      state.tasks = state.tasks.filter(t => !t.sample);
+      state.projects = state.projects.filter(p => !p.sample);
+      if (state.tasks.length && confirm(`雲端已有 ${remote.tasks.length} 項任務。\n\n按「確定」：用雲端資料取代這台裝置的資料\n按「取消」：把兩邊資料合併`)) {
+        state = { projects:[], tasks:[], deleted:{} };
+      }
+      saveLocal();
+    }
+    syncCfg = { ...cfg, lastSync: syncCfg?.lastSync || 0 };
+    store.set(SYNCKEY, syncCfg);
+    msg.innerHTML = '<div class="okmsg">✓ 連線成功，正在同步…</div>';
+    await syncNow();
+    if (syncState.cls === 'ok') { closeModals(); toast('雲端同步已開啟'); render(); }
+    else msg.innerHTML = `<div class="err">${esc(syncState.text)}</div>`;
+  } catch (err) {
+    msg.innerHTML = `<div class="err">${err.status === 401 ? 'Token 無效或過期' : err.status === 404 ? '找不到這個 repo，或 Token 沒有這個 repo 的權限' : err.status === 403 ? 'Token 權限不足（需要 Contents：Read and write）' : '連線失敗，請檢查網路'}</div>`;
+  }
+});
+$('#syncNow').addEventListener('click', async () => { await syncNow(); $('#syncInfo').textContent = '目前狀態：' + syncState.text; });
+$('#syncOff').addEventListener('click', () => {
+  if (!confirm('中斷這台裝置的雲端同步？\n（這台裝置上的資料和雲端資料都會保留，之後可以重新連線）')) return;
+  syncCfg = null; store.del(SYNCKEY); refreshSyncBadge(); closeModals(); toast('已中斷同步');
+});
+$('#syncBtn').addEventListener('click', openSync);
+$('#syncSetBtn').addEventListener('click', openSync);
+
+/* ================= rendering ================= */
+const VIEWS = [['today','🎯','今日焦點','今日'],['daily','📅','每日待辦','每日'],['gantt','📊','甘特圖','甘特圖'],['all','📋','全部任務','全部']];
+function render(){
+  renderNav(); renderProjects();
+  const fn = { today:renderToday, daily:renderDaily, gantt:renderGantt, all:renderAll }[ui.view] || renderToday;
+  const searchFocused = document.activeElement?.id === 'search';
+  const pos = searchFocused ? document.activeElement.selectionStart : 0;
+  $('#main').innerHTML = banner() + fn();
+  if (searchFocused) { const s = $('#search'); if (s) { s.focus(); s.setSelectionRange(pos, pos); } }
+  if (ui.view === 'gantt') scrollGantt();
+  const n = state.tasks.filter(t => !isDone(t) && t.due === todayStr()).length;
+  document.title = n ? `(${n} 今日截止) 工作管理系統` : '工作管理系統';
+}
+function renderNav(){
+  const T = todayStr();
+  const open = state.tasks.filter(t => !isDone(t));
+  const hot = open.filter(t => t.due && t.due <= T).length;
+  const html = short => VIEWS.map(([k,ic,l,s]) => {
+    let c = '';
+    if (k === 'today' && hot) c = `<span class="cnt hot">${hot}</span>`;
+    if (k === 'all') c = `<span class="cnt">${open.length}</span>`;
+    return short
+      ? `<button data-view="${k}" class="${ui.view===k?'on':''}"><span class="ic">${ic}</span>${s}${c}</button>`
+      : `<button data-view="${k}" class="${ui.view===k?'on':''}"><span class="ic">${ic}</span>${l}${c}</button>`;
+  }).join('');
+  $('#nav').innerHTML = html(false);
+  $('#tabbar').innerHTML = html(true);
+}
+function renderProjects(){
+  const cnt = f => state.tasks.filter(t => !isDone(t) && f(t)).length;
+  const rows = [`<div class="row"><button class="p ${ui.project==='all'?'on':''}" data-proj="all"><span class="dot" style="background:var(--muted)"></span>全部專案<span class="cnt">${cnt(()=>true)}</span></button></div>`];
+  state.projects.forEach(p => rows.push(`<div class="row"><button class="p ${ui.project===p.id?'on':''}" data-proj="${p.id}"><span class="dot" style="background:${esc(p.color)}"></span>${esc(p.name)}<span class="cnt">${cnt(t=>t.projectId===p.id)}</span></button><button class="edit" data-editproj="${p.id}" title="編輯專案">✎</button></div>`));
+  const nn = cnt(t => !proj(t.projectId));
+  if (nn) rows.push(`<div class="row"><button class="p ${ui.project==='none'?'on':''}" data-proj="none"><span class="dot" style="background:${NONE_COLOR}"></span>未分類<span class="cnt">${nn}</span></button></div>`);
+  rows.push(`<div class="row mobile-only"><button class="p" data-addproj>＋ 專案</button></div>`);
+  $('#plist').innerHTML = rows.join('');
+}
+function banner(){
+  const T = todayStr();
+  let h = '';
+  if (store.get('workmgr.dismiss') !== T) {
+    const open = state.tasks.filter(t => !isDone(t));
+    const today = open.filter(t => t.due === T).sort(cmp);
+    const over = open.filter(t => t.due && t.due < T);
+    if (today.length || over.length) {
+      h += `<div class="banner"><div class="big">⏰</div><div>`;
+      if (today.length) h += `<div><b>今天是最後一天！</b>以下 ${today.length} 項今天必須完成：</div><ul>${today.map(t=>`<li><a href="#" data-edit="${t.id}" style="color:inherit">${esc(t.title)}</a> <span style="color:var(--muted)">· ${esc(pName(t))}</span></li>`).join('')}</ul>`;
+      if (over.length) h += `<div style="margin-top:${today.length?6:0}px">另有 <b>${over.length} 項已逾期</b>，請盡快處理或調整 Deadline。</div>`;
+      h += `</div><button class="x" data-dismiss title="今天不再顯示">×</button></div>`;
+    }
+  }
+  if (!syncCfg && !store.get('workmgr.hideSyncTip')) h += `<div class="banner info"><div class="big">☁</div><div><b>尚未開啟雲端同步</b>：目前資料只存在這台裝置。<a href="#" data-opensync style="color:var(--blue)">設定 GitHub 同步</a> 後，電腦和手機就能共用同一份資料。</div><button class="x" data-hidesynctip title="不再顯示">×</button></div>`;
+  return h;
+}
+function taskHTML(t, ref){
+  const info = dueInfo(t, ref);
+  const s = startOf(t);
+  const range = t.due ? `${md(s)} → ${mdw(t.due)} · 共 ${diff(s,t.due)+1} 天` : `開始 ${md(s)}`;
+  const firstLine = (t.detail || '').split('\n').find(x => x.trim()) || '';
+  return `<div class="task u-${info.key} ${isDone(t)?'is-done':''}" style="--c:${esc(pColor(t))}">
+    <button class="check" data-toggle="${t.id}" title="${isDone(t)?'標記為未完成':'標記為完成'}">✓</button>
+    <div class="body" data-edit="${t.id}">
+      <div class="tt">${esc(t.title)}</div>
+      <div class="meta"><span class="chip" style="--c:${esc(pColor(t))}">${esc(pName(t))}</span><span>${range}</span>${t.status==='doing'?'<span class="tag">進行中</span>':''}</div>
+      ${firstLine ? `<div class="detail">${esc(firstLine)}</div>` : ''}
+    </div>
+    <span class="badge ${info.cls}">${info.text}</span>
+  </div>`;
+}
+const header = (title, sub) => `<div class="top"><h1>${title}</h1><span class="sub">${sub||''}</span><span class="grow"></span><button class="btn primary" data-new>＋ 新增待辦</button></div>`;
+const projLabel = () => ui.project==='all' ? '' : ` · ${esc(ui.project==='none'?'未分類':proj(ui.project)?.name||'')}`;
+
+function renderToday(){
+  const T = todayStr();
+  const tasks = filtered();
+  const open = tasks.filter(t => !isDone(t)).sort(cmp);
+  const by = k => open.filter(t => dueInfo(t, T).key === k);
+  const g = { overdue:by('overdue'), today:by('today'), soon:by('soon'), week:by('week'), later:by('later'), nodue:by('nodue') };
+  const doneToday = tasks.filter(t => isDone(t) && t.doneAt === T);
+  let h = header('今日焦點', fullDate(T) + projLabel());
+  h += `<div class="stats">
+    <div class="stat r"><div class="n">${g.overdue.length}</div><div class="l">已逾期</div></div>
+    <div class="stat r"><div class="n">${g.today.length}</div><div class="l">今天最後一天</div></div>
+    <div class="stat o"><div class="n">${g.soon.length}</div><div class="l">3 天內到期</div></div>
+    <div class="stat b"><div class="n">${doneToday.length}</div><div class="l">今天已完成</div></div>
+  </div>`;
+  if (!open.length) return h + `<div class="empty">🎉 目前沒有待辦事項。<br><br><button class="btn primary" data-new>＋ 新增待辦</button></div>`;
+  const first = open[0], fi = dueInfo(first, T);
+  h += `<div class="next" data-edit="${first.id}"><div class="k">👉 現在最該先做的事（Deadline 最近）</div><div class="t">${esc(first.title)}</div><div class="m">${esc(pName(first))} · ${first.due ? 'Deadline ' + mdw(first.due) + ' · ' + fi.text : '未設定 Deadline'}</div></div>`;
+  [['overdue','已逾期 — 最優先處理'],['today','今天是最後一天'],['soon','未來 3 天內到期'],['week','一週內到期'],['later','之後'],['nodue','未設定 Deadline']]
+    .forEach(([k,l]) => { if (g[k].length) h += `<div class="group ${k}"><h3>${l}<span class="pill">${g[k].length}</span></h3>${g[k].map(t=>taskHTML(t,T)).join('')}</div>`; });
+  if (doneToday.length) h += `<div class="group"><h3>今天已完成<span class="pill">${doneToday.length}</span></h3>${doneToday.map(t=>taskHTML(t,T)).join('')}</div>`;
+  return h;
+}
+
+function tasksOn(D){ return filtered().filter(t => startOf(t) <= D && (!isDone(t) || (t.doneAt && t.doneAt >= D))); }
+function renderDaily(){
+  const T = todayStr(), D = ui.date;
+  const dd = parse(D); const mon = addDays(D, -((dd.getDay()+6)%7));
+  let strip = '';
+  for (let i=0;i<7;i++){
+    const d = addDays(mon,i), x = parse(d);
+    const list = tasksOn(d);
+    const pend = list.filter(t => !(isDone(t) && t.doneAt <= d)).length;
+    const dl = list.filter(t => t.due === d && !(isDone(t) && t.doneAt <= d)).length;
+    strip += `<div class="wd ${d===D?'sel':''} ${d===T?'is-today':''}" data-day="${d}"><div class="w">${d===T?'今天':'週'+WD[x.getDay()]}</div><div class="d">${x.getMonth()+1}/${x.getDate()}</div><div class="c">${pend} 項待辦</div>${dl?`<span class="dl" title="當天截止">${dl}</span>`:''}</div>`;
+  }
+  const list = tasksOn(D).map(t => (isDone(t) && t.doneAt > D) ? { ...t, status:'todo' } : t).sort(cmp);
+  const lastOnes = list.filter(t => !isDone(t) && t.due === D);
+  let h = header('每日待辦', fullDate(D) + (D===T?' · 今天':'') + projLabel());
+  h += `<div class="daynav">
+    <button class="btn sm" data-shift="-7">« 上週</button><button class="btn sm" data-shift="-1">‹ 前一天</button>
+    <button class="btn sm" data-day="${T}">今天</button>
+    <button class="btn sm" data-shift="1">後一天 ›</button><button class="btn sm" data-shift="7">下週 »</button>
+    <input type="date" id="pickDay" value="${D}">
+  </div><div class="week">${strip}</div>`;
+  if (lastOnes.length) h += `<div class="banner" style="margin-bottom:14px"><div class="big">⚠️</div><div><b>${D===T?'今天':mdw(D)}是 ${lastOnes.length} 項任務的最後一天：</b>${lastOnes.map(t=>esc(t.title)).join('、')}</div></div>`;
+  if (!list.length) return h + `<div class="empty">這一天沒有待辦事項。</div>`;
+  h += `<div class="hint" style="margin-bottom:10px">依 Deadline 由近到遠排序 · 剩餘天數以 <b>${mdw(D)}</b> 計算</div>`;
+  return h + list.map(t => taskHTML(t, D)).join('');
+}
+
+function renderAll(){
+  const q = ui.search.trim().toLowerCase();
+  let list = filtered().filter(t => {
+    if (ui.status === 'open' && isDone(t)) return false;
+    if (ui.status === 'done' && !isDone(t)) return false;
+    if (ui.status === 'doing' && t.status !== 'doing') return false;
+    return !q || (t.title + ' ' + (t.detail||'') + ' ' + pName(t)).toLowerCase().includes(q);
+  }).sort(cmp);
+  if (ui.status === 'done') list.sort((a,b) => (b.doneAt||'').localeCompare(a.doneAt||''));
+  let h = header('全部任務', `共 ${list.length} 項` + projLabel());
+  h += `<div class="tools"><input type="search" id="search" placeholder="搜尋標題、內容、專案…" value="${esc(ui.search)}">
+    <select id="statusSel">${[['open','未完成'],['doing','進行中'],['done','已完成'],['all','全部']].map(([v,l])=>`<option value="${v}" ${ui.status===v?'selected':''}>${l}</option>`).join('')}</select></div>`;
+  if (!list.length) return h + `<div class="empty">沒有符合條件的任務。</div>`;
+  return h + list.map(t => taskHTML(t)).join('');
+}
+
+let ganttScroll = 0;
+function renderGantt(){
+  const T = todayStr(), W = ui.ganttW, LW = innerWidth <= 820 ? 130 : 230;
+  const all = filtered();
+  const ts = all.filter(t => t.due && (ui.showDone || !isDone(t)));
+  const noDue = all.filter(t => !t.due && !isDone(t)).length;
+  let h = header('甘特圖', '橫條 = 開始日（填寫日）到 Deadline 的完整期間' + projLabel());
+  h += `<div class="tools">
+    <span class="seg">${[[18,'窄'],[32,'中'],[48,'寬']].map(([v,l])=>`<button data-zoom="${v}" class="${W===v?'on':''}">${l}</button>`).join('')}</span>
+    <button class="btn sm" data-gtoday>回到今天</button>
+    <label><input type="checkbox" id="showDone" ${ui.showDone?'checked':''}> 顯示已完成</label>
+    ${noDue?`<span class="hint">另有 ${noDue} 項未設定 Deadline，不顯示在甘特圖</span>`:''}
+  </div>`;
+  if (!ts.length) return h + `<div class="empty">沒有可顯示的任務（需設定 Deadline）。</div>`;
+  let s = addDays(T,-3), e = addDays(T,21);
+  ts.forEach(t => { const st = startOf(t); if (st < s) s = st; if (t.due > e) e = t.due; });
+  s = addDays(s,-2); e = addDays(e,3);
+  const n = diff(s,e) + 1, TW = n * W;
+  let months = '', days = '', grid = '', run = 0, curM = null;
+  for (let i=0;i<n;i++){
+    const d = addDays(s,i), x = parse(d), mk = `${x.getFullYear()}/${x.getMonth()+1}`;
+    if (mk !== curM){ if (curM) months += `<div style="width:${run*W}px">${curM}</div>`; curM = mk; run = 0; }
+    run++;
+    const we = x.getDay()===0 || x.getDay()===6;
+    days += `<div class="${we?'we':''} ${d===T?'td':''}" style="width:${W}px">${x.getDate()}${W>=28?`<br>${WD[x.getDay()]}`:''}</div>`;
+    if (we) grid += `<div class="we" style="left:${i*W}px;width:${W}px"></div>`;
+  }
+  months += `<div style="width:${run*W}px">${curM}</div>`;
+  const ti = diff(s,T);
+  grid += `<div class="now" style="left:${ti*W + W/2 - 1}px" title="今天"></div>`;
+  const groups = [...state.projects.map(p => ({ id:p.id, name:p.name, color:p.color })), { id:null, name:'未分類', color:NONE_COLOR }];
+  let rows = '';
+  groups.forEach(gp => {
+    const list = ts.filter(t => gp.id ? t.projectId === gp.id : !proj(t.projectId)).sort(cmp);
+    if (!list.length) return;
+    rows += `<div class="g-row g-grp" style="--c:${esc(gp.color)}"><div class="g-label" style="width:${LW}px"><i></i>${esc(gp.name)}<span style="color:var(--muted);font-weight:500">· ${list.length}</span></div><div class="g-track" style="width:${TW}px"></div></div>`;
+    list.forEach(t => {
+      const st = startOf(t), info = dueInfo(t, T);
+      const left = diff(s, st) * W, dur = diff(st, t.due) + 1, width = Math.max(dur * W, 6);
+      const label = width > 120 ? `${md(st)}–${md(t.due)} · ${dur}天` : width > 40 ? `${dur}天` : '';
+      let ext = '';
+      if (!isDone(t) && t.due < T) ext = `<div class="ext" style="left:${left+width}px;width:${diff(t.due,T)*W}px" title="逾期 ${diff(t.due,T)} 天"></div>`;
+      const cls = isDone(t) ? 'done' : info.key === 'today' ? 'today' : t.status === 'doing' ? 'doing' : '';
+      rows += `<div class="g-row"><div class="g-label" style="width:${LW}px" data-edit="${t.id}"><div class="a" title="${esc(t.title)}">${esc(t.title)}</div><div class="b ${['overdue','today'].includes(info.key)?'r':''}">${info.text} · ${md(t.due)}</div></div>
+        <div class="g-track" style="width:${TW}px"><div class="bar ${cls}" style="--c:${esc(pColor(t))};left:${left}px;width:${width}px" data-edit="${t.id}" title="${esc(t.title)}&#10;${st} → ${t.due}（共 ${dur} 天）&#10;${info.text}">${label}</div>${ext}</div></div>`;
+    });
+  });
+  ganttScroll = Math.max(0, ti * W - 4 * W);
+  h += `<div class="gantt-wrap" id="gw"><div class="gantt" style="width:${LW+TW}px">
+    <div class="g-head"><div class="g-corner" style="width:${LW}px">任務 / Deadline</div><div class="g-cal" style="width:${TW}px"><div class="g-months">${months}</div><div class="g-days">${days}</div></div></div>
+    <div class="g-body"><div class="g-grid" style="left:${LW}px;width:${TW}px">${grid}</div>${rows}</div>
+  </div></div>
+  <div class="legend"><span><i style="background:var(--accent)"></i>期間（開始 → Deadline）</span><span><i style="background:repeating-linear-gradient(45deg,var(--accent) 0 4px,#a5b4fc 4px 8px)"></i>進行中</span><span><i style="outline:2px solid var(--red);background:var(--accent)"></i>今天最後一天</span><span><i style="background:repeating-linear-gradient(45deg,var(--red) 0 3px,transparent 3px 6px);border:1px solid var(--red)"></i>逾期延伸到今天</span><span><i style="width:2px;background:var(--accent)"></i>今天</span></div>`;
+  return h;
+}
+function scrollGantt(){ const gw = $('#gw'); if (gw) gw.scrollLeft = ganttScroll; }
+
+/* ================= task modal ================= */
+let editing = null;
+const tf = $('#taskForm');
+function fillProjSelect(sel){
+  tf.projectId.innerHTML = `<option value="">未分類</option>` + state.projects.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  tf.projectId.value = sel || '';
+}
+function openTask(id){
+  const t = id ? state.tasks.find(x => x.id === id) : null;
+  if (id && !t) return;
+  editing = t ? t.id : null;
+  $('#taskTitle').textContent = t ? '編輯待辦' : '新增待辦';
+  $('#delTask').style.display = t ? '' : 'none';
+  $('#taskErr').textContent = '';
+  fillProjSelect(t ? t.projectId : (ui.project !== 'all' && ui.project !== 'none' ? ui.project : ''));
+  tf.title.value = t?.title || '';
+  tf.start.value = t ? startOf(t) : (ui.view === 'daily' && ui.date > todayStr() ? ui.date : todayStr());
+  tf.due.value = t?.due || '';
+  tf.status.value = t?.status || 'todo';
+  tf.detail.value = t?.detail || '';
+  updateDur();
+  $('#taskMask').classList.add('open');
+  if (innerWidth > 820) setTimeout(() => tf.title.focus(), 30);
+}
+function updateDur(){
+  const s = tf.start.value, d = tf.due.value, T = todayStr();
+  if (!s || !d) { $('#durHint').innerHTML = d ? '' : '未設定 Deadline 的任務會排在最後，也不會出現在甘特圖。'; return; }
+  if (d < s) { $('#durHint').innerHTML = '<span class="err">Deadline 不能早於開始日期</span>'; return; }
+  const left = diff(T, d);
+  $('#durHint').innerHTML = `期間共 <b>${diff(s,d)+1}</b> 天 · ${left<0?`已逾期 ${-left} 天`:left===0?'<b style="color:var(--red)">今天就是最後一天</b>':`距離 Deadline 還有 <b>${left}</b> 天`}`;
+}
+tf.start.addEventListener('input', updateDur);
+tf.due.addEventListener('input', updateDur);
+tf.addEventListener('submit', e => {
+  e.preventDefault();
+  const title = tf.title.value.trim(), start = tf.start.value, due = tf.due.value;
+  if (!title) { $('#taskErr').textContent = '請輸入標題'; return; }
+  if (due && start && due < start) { $('#taskErr').textContent = 'Deadline 不能早於開始日期'; return; }
+  const status = tf.status.value;
+  const data = { title, start, due, status, projectId: tf.projectId.value || null, detail: tf.detail.value };
+  const t = editing && state.tasks.find(x => x.id === editing);
+  if (t) {
+    data.doneAt = status === 'done' ? (isDone(t) ? t.doneAt : todayStr()) : null;
+    touch(Object.assign(t, data));
+    toast('已更新');
+  } else {
+    state.tasks.push(touch({ id:uid(), createdAt:new Date().toISOString(), doneAt: status==='done'?todayStr():null, ...data }));
+    toast('已新增待辦');
+  }
+  save(); closeModals(); render();
+});
+$('#delTask').addEventListener('click', () => {
+  const t = editing && state.tasks.find(x => x.id === editing);
+  if (!t || !confirm(`確定刪除「${t.title}」？此動作無法復原。`)) return;
+  removeTask(t); save(); closeModals(); render(); toast('已刪除');
+});
+$('#quickProj').addEventListener('click', () => {
+  const name = (prompt('新專案名稱') || '').trim();
+  if (!name) return;
+  const p = touch({ id:uid(), name, color:COLORS[state.projects.length % COLORS.length], createdAt:new Date().toISOString() });
+  state.projects.push(p); save(); fillProjSelect(p.id); renderProjects();
+});
+
+/* ================= project modal ================= */
+let editingProj = null, projColor = COLORS[0];
+const pf = $('#projForm');
+function openProj(id){
+  editingProj = id ? proj(id) : null;
+  $('#projTitle').textContent = editingProj ? '編輯專案' : '新增專案';
+  $('#delProj').style.display = editingProj ? '' : 'none';
+  pf.name.value = editingProj?.name || '';
+  projColor = editingProj?.color || COLORS[state.projects.length % COLORS.length];
+  drawSwatches();
+  $('#projMask').classList.add('open');
+  if (innerWidth > 820) setTimeout(() => pf.name.focus(), 30);
+}
+function drawSwatches(){ $('#swatches').innerHTML = COLORS.map(c => `<button type="button" style="--c:${c}" data-color="${c}" class="${c===projColor?'on':''}"></button>`).join(''); }
+$('#swatches').addEventListener('click', e => { const c = e.target.dataset.color; if (c) { projColor = c; drawSwatches(); } });
+pf.addEventListener('submit', e => {
+  e.preventDefault();
+  const name = pf.name.value.trim(); if (!name) return;
+  if (editingProj) touch(Object.assign(editingProj, { name, color:projColor }));
+  else { const p = touch({ id:uid(), name, color:projColor, createdAt:new Date().toISOString() }); state.projects.push(p); ui.project = p.id; }
+  save(); saveUI(); closeModals(); render();
+});
+$('#delProj').addEventListener('click', () => {
+  if (!editingProj) return;
+  const n = state.tasks.filter(t => t.projectId === editingProj.id).length;
+  const msg = n ? `專案「${editingProj.name}」底下有 ${n} 項任務。\n\n按「確定」：刪除專案，任務移到「未分類」\n按「取消」：不刪除` : `確定刪除專案「${editingProj.name}」？`;
+  if (!confirm(msg)) return;
+  state.tasks.forEach(t => { if (t.projectId === editingProj.id) { t.projectId = null; touch(t); } });
+  state.projects = state.projects.filter(p => p !== editingProj);
+  state.deleted[editingProj.id] = now();
+  if (ui.project === editingProj.id) ui.project = 'all';
+  save(); saveUI(); closeModals(); render(); toast('專案已刪除');
+});
+
+function closeModals(){ document.querySelectorAll('.mask.open').forEach(m => m.classList.remove('open')); editing = null; editingProj = null; }
+document.querySelectorAll('.mask').forEach(m => m.addEventListener('mousedown', e => { if (e.target === m) closeModals(); }));
+document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModals));
+
+/* ================= events ================= */
+const main = $('#main');
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-view],[data-proj],[data-editproj],[data-addproj],[data-edit],[data-toggle],[data-new],[data-day],[data-shift],[data-zoom],[data-gtoday],[data-dismiss],[data-opensync],[data-hidesynctip]');
+  if (!el) return;
+  const d = el.dataset;
+  if (d.view) { ui.view = d.view; if (d.view === 'daily') ui.date = todayStr(); saveUI(); render(); main.scrollTop = 0; scrollTo(0,0); }
+  else if (d.editproj) openProj(d.editproj);
+  else if (d.addproj !== undefined) openProj(null);
+  else if (d.proj) { ui.project = d.proj; saveUI(); render(); }
+  else if (d.toggle) {
+    const t = state.tasks.find(x => x.id === d.toggle); if (!t) return;
+    if (isDone(t)) { t.status = 'todo'; t.doneAt = null; } else { t.status = 'done'; t.doneAt = todayStr(); toast('完成！👍'); }
+    touch(t); save(); render();
+  }
+  else if (d.edit) { e.preventDefault(); openTask(d.edit); }
+  else if (d.new !== undefined) openTask(null);
+  else if (d.day) { ui.date = d.day; render(); }
+  else if (d.shift) { ui.date = addDays(ui.date, +d.shift); render(); }
+  else if (d.zoom) { ui.ganttW = +d.zoom; saveUI(); render(); }
+  else if (d.gtoday !== undefined) scrollGantt();
+  else if (d.dismiss !== undefined) { store.set('workmgr.dismiss', todayStr()); render(); }
+  else if (d.opensync !== undefined) { e.preventDefault(); openSync(); }
+  else if (d.hidesynctip !== undefined) { store.set('workmgr.hideSyncTip', true); render(); }
+});
+main.addEventListener('input', e => { if (e.target.id === 'search') { ui.search = e.target.value; render(); } });
+main.addEventListener('change', e => {
+  if (e.target.id === 'statusSel') { ui.status = e.target.value; saveUI(); render(); }
+  if (e.target.id === 'showDone') { ui.showDone = e.target.checked; saveUI(); render(); }
+  if (e.target.id === 'pickDay' && e.target.value) { ui.date = e.target.value; render(); }
+});
+$('#addProj').addEventListener('click', () => openProj(null));
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModals();
+  const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName);
+  if (!typing && !document.querySelector('.mask.open') && (e.key === 'n' || e.key === 'N') && !e.ctrlKey && !e.metaKey) { e.preventDefault(); openTask(null); }
+});
+
+/* ---- backup ---- */
+$('#exportBtn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type:'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `工作管理備份_${todayStr()}.json`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+$('#importBtn').addEventListener('click', () => $('#importFile').click());
+$('#importFile').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const data = normalize(JSON.parse(await f.text()));
+    if (!data) throw 0;
+    if (!confirm(`匯入 ${data.tasks.length} 項任務、${data.projects.length} 個專案，將取代目前所有資料${syncCfg?'（雲端也會一起更新）':''}。確定？`)) return;
+    const t = now(), keep = new Set([...data.tasks, ...data.projects].map(x => x.id));
+    [...state.tasks, ...state.projects].forEach(x => { if (!keep.has(x.id)) data.deleted[x.id] = t; });
+    [...data.tasks, ...data.projects].forEach(x => { x.updatedAt = t; delete x.sample; x.createdAt = x.createdAt || new Date().toISOString(); });
+    data.tasks.forEach(x => delete data.deleted[x.id]); data.projects.forEach(x => delete data.deleted[x.id]);
+    state = data; ui.project = 'all'; save(); saveUI(); render(); toast('匯入完成');
+  } catch(err) { alert('檔案格式不正確，無法匯入。'); }
+});
+
+/* ---- desktop notification ---- */
+function notifyToday(force){
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const T = todayStr();
+  if (!force && store.get('workmgr.notified') === T) return;
+  const list = state.tasks.filter(t => !isDone(t) && t.due === T);
+  const over = state.tasks.filter(t => !isDone(t) && t.due && t.due < T).length;
+  if (!list.length && !over) return;
+  const body = (list.length ? `今天最後一天：${list.map(t=>t.title).join('、')}` : '') + (over ? `${list.length?'\n':''}已逾期 ${over} 項` : '');
+  try { new Notification('⏰ 工作管理系統', { body, icon:'icon-192.png' }); store.set('workmgr.notified', T); } catch(e){}
+}
+function refreshNotifyBtn(){
+  const b = $('#notifyBtn');
+  if (!('Notification' in window)) { b.style.display = 'none'; return; }
+  b.textContent = Notification.permission === 'granted' ? '🔔 桌面提醒：已開啟' : '🔔 開啟桌面提醒';
+}
+$('#notifyBtn').addEventListener('click', async () => {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'granted') { notifyToday(true); return; }
+  const p = await Notification.requestPermission();
+  refreshNotifyBtn();
+  if (p === 'granted') notifyToday(true); else toast('瀏覽器未允許通知');
+});
+
+/* ---- keep in sync: on open, on return to the app, every minute, when back online ---- */
+setInterval(() => {
+  const T = todayStr();
+  if (T !== lastDay) { if (ui.date === lastDay) ui.date = T; lastDay = T; render(); notifyToday(); }
+  if (syncCfg && document.visibilityState === 'visible' && !document.querySelector('.mask.open')) syncNow();
+}, 60000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && syncCfg) syncNow(); });
+addEventListener('online', () => syncNow());
+addEventListener('offline', refreshSyncBadge);
+addEventListener('storage', e => { if (e.key === KEY) { state = normalize(store.get(KEY)) || state; render(); } });
+let rT; addEventListener('resize', () => { clearTimeout(rT); rT = setTimeout(() => { if (ui.view === 'gantt') render(); }, 200); });
+
+if ('serviceWorker' in navigator && /^https:|^http:\/\/localhost/.test(location.href)) navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+saveLocal();
+refreshNotifyBtn();
+refreshSyncBadge();
+render();
+notifyToday();
+syncNow();
+})();
+</script>
+</body>
+</html>
