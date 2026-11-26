@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#4f46e5">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -81,7 +81,7 @@ aside{background:var(--panel);border-right:1px solid var(--line);display:flex;fl
 .side-foot button{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:7px 10px;text-align:left;font-size:13px;color:var(--muted)}
 .side-foot button:hover{color:var(--text);border-color:var(--muted)}
 .side-foot small{color:var(--muted);font-size:11.5px;line-height:1.4}
-.tabbar,.fab,.plist .mobile-only{display:none}
+.tabbar,.fab,.mchips{display:none}
 
 /* ---------- main ---------- */
 main{height:100vh;overflow:auto;padding:22px 28px 60px}
@@ -148,7 +148,7 @@ main{height:100vh;overflow:auto;padding:22px 28px 60px}
 /* daily */
 .daynav{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
 .daynav input[type=date]{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:5px 8px}
-.week{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:20px}
+.wstrip{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:20px}
 .wd{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 4px;text-align:center;cursor:pointer;position:relative}
 .wd:hover{border-color:var(--muted)}
 .wd .w{font-size:12px;color:var(--muted)}
@@ -233,21 +233,28 @@ main{height:100vh;overflow:auto;padding:22px 28px 60px}
 
 /* ---------- phone ---------- */
 @media (max-width:820px){
-  body{display:block;padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+  html{overflow-x:hidden}
+  body{overflow-x:clip;max-width:100vw}
+  body{display:block;padding-bottom:calc(64px + env(safe-area-inset-bottom));touch-action:pan-y pinch-zoom;overscroll-behavior-x:none}
+  main{min-width:0;max-width:100vw}
+  .gantt-wrap{touch-action:pan-x pan-y pinch-zoom}
+  .task .title,.task .desc,.task .meta{overflow-wrap:anywhere}
   aside{position:sticky;top:0;z-index:20;height:auto;border-right:0;border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
   .brand{padding:10px 14px 6px}
   .nav,.sec,.side-foot{display:none}
-  .plist{flex-direction:row;overflow-x:auto;padding:2px 12px 10px;gap:6px;scrollbar-width:none}
-  .plist::-webkit-scrollbar{display:none}
-  .plist .row{flex:none}
-  .plist .mobile-only{display:block}
-  .plist .mobile-only button.p{border-style:dashed;color:var(--accent)}
-  .plist button.p{border:1px solid var(--line);border-radius:999px;padding:4px 12px;white-space:nowrap;font-size:13px}
-  .plist .cnt{margin-left:4px}
-  .plist .act,.plist .subsec{display:none !important}
-  .plist{align-items:center}
-  .plist .kids{flex-direction:row;align-items:center;margin:0;padding:0 0 0 8px;border-left:2px solid var(--line);gap:6px;height:24px}
-  .plist .exp{width:22px;height:22px}
+  .plist{display:none !important}
+  .mchips{display:block;padding:0 0 8px}
+  .chips{display:flex;gap:6px;overflow-x:auto;padding:2px 12px;scrollbar-width:none;overscroll-behavior-x:contain;touch-action:pan-x pinch-zoom}
+  .chips::-webkit-scrollbar{display:none}
+  .chips.sub{margin-top:6px;padding-top:7px;border-top:1px dashed var(--line);background:var(--panel-2)}
+  .chip{flex:none;display:flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:999px;padding:5px 12px;white-space:nowrap;font-size:13px}
+  .chip .dot{width:8px;height:8px;border-radius:3px}
+  .chip .cnt{font-size:11.5px;color:var(--muted)}
+  .chip.country{font-weight:600}
+  .chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .chip.on .cnt{color:rgba(255,255,255,.85)}
+  .chip.add{border-style:dashed;color:var(--accent);background:none}
+  .chips .empty-k{font-size:12px;color:var(--muted);align-self:center;white-space:nowrap}
   main{height:auto;overflow:visible;padding:14px 14px 90px}
   .top{margin-bottom:12px}
   .top h1{font-size:20px}
@@ -260,7 +267,7 @@ main{height:100vh;overflow:auto;padding:22px 28px 60px}
   .task{padding:10px 12px;gap:10px;flex-wrap:wrap}
   .task .body{flex:1 1 calc(100% - 40px)}
   .task .badge{margin-left:32px}
-  .week{gap:4px}.wd{padding:6px 0}.wd .d{font-size:14px}.wd .c{display:none}.wd .w{font-size:11px}
+  .wstrip{gap:4px}.wd{padding:6px 0}.wd .d{font-size:14px}.wd .c{display:none}.wd .w{font-size:11px}
   .daynav .btn[data-shift="-7"],.daynav .btn[data-shift="7"]{display:none}
   .daynav input[type=date]{flex:1}
   .two{grid-template-columns:1fr}
@@ -285,6 +292,7 @@ main{height:100vh;overflow:auto;padding:22px 28px 60px}
   <nav class="nav" id="nav"></nav>
   <div class="sec">國家 / 專案 <button data-addmenu title="新增國家或專案">＋</button></div>
   <div class="plist" id="plist"></div>
+  <div class="mchips" id="mchips"></div>
   <div class="side-foot">
     <button id="syncSetBtn">☁ 雲端同步設定</button>
     <button id="notifyBtn">🔔 開啟桌面提醒</button>
@@ -687,8 +695,31 @@ function renderProjects(){
   const nn = cnt(t => !proj(t.projectId));
   if (nn) rows.push(`<div class="row"><button class="p ${sel==='none'?'on':''}" data-proj="none"><span class="dot" style="background:${NONE_COLOR}"></span><span class="nm">未分類任務</span><span class="cnt">${nn}</span></button></div>`);
   if (!state.countries.length && !state.projects.length) rows.push(`<div class="empty-k">按右上 ＋ 新增國家或專案</div>`);
-  rows.push(`<div class="row mobile-only"><button class="p" data-addmenu>＋ 新增</button></div>`);
   $('#plist').innerHTML = rows.join('');
+  renderChips(cnt);
+}
+// Phone: row 1 = 全部 + countries (+ projects with no country), row 2 = projects of the picked country.
+function renderChips(cnt){
+  const sel = ui.project;
+  const chip = (attr, on, label, n, cls='') => `<button class="chip ${cls} ${on?'on':''}" ${attr}>${label}${n!=null?`<span class="cnt">${n}</span>`:''}</button>`;
+  const projChip = p => chip(`data-proj="${p.id}"`, sel===p.id, `<span class="dot" style="background:${esc(p.color)}"></span>${esc(p.name)}`, cnt(t=>t.projectId===p.id));
+  let r1 = chip('data-clearfilter', sel==='all', '全部', cnt(()=>true));
+  state.countries.forEach(c => {
+    const on = sel===`c:${c.id}` || proj(sel)?.countryId === c.id;
+    r1 += chip(`data-proj="c:${c.id}"`, on, `🌐 ${esc(c.name)}`, cnt(t=>proj(t.projectId)?.countryId===c.id), 'country');
+  });
+  looseProjects().forEach(p => r1 += projChip(p));
+  const nn = cnt(t => !proj(t.projectId));
+  if (nn) r1 += chip('data-proj="none"', sel==='none', '未分類', nn);
+  r1 += chip('data-addmenu', false, '＋ 新增', null, 'add');
+  const cid = sel.startsWith('c:') ? sel.slice(2) : proj(sel)?.countryId;
+  const c = country(cid);
+  let r2 = '';
+  if (c) {
+    const ps = state.projects.filter(p => p.countryId === c.id);
+    r2 = `<div class="chips sub">${ps.length ? ps.map(projChip).join('') : '<span class="empty-k">此國家尚無專案</span>'}${chip(`data-addproj="${c.id}"`, false, '＋ 專案', null, 'add')}</div>`;
+  }
+  $('#mchips').innerHTML = `<div class="chips">${r1}</div>${r2}`;
 }
 function fbar(){
   if (ui.project === 'all') return '';
@@ -773,7 +804,7 @@ function renderDaily(){
     <button class="btn sm" data-day="${T}">今天</button>
     <button class="btn sm" data-shift="1">後一天 ›</button><button class="btn sm" data-shift="7">下週 »</button>
     <input type="date" id="pickDay" value="${D}">
-  </div><div class="week">${strip}</div>`;
+  </div><div class="wstrip">${strip}</div>`;
   if (lastOnes.length) h += `<div class="banner" style="margin-bottom:14px"><div class="big">⚠️</div><div><b>${D===T?'今天':mdw(D)}是 ${lastOnes.length} 項任務的最後一天：</b>${lastOnes.map(t=>esc(t.title)).join('、')}</div></div>`;
   if (!list.length) return h + `<div class="empty">這一天沒有待辦事項。</div>`;
   h += `<div class="hint" style="margin-bottom:10px">依 Deadline 由近到遠排序 · 剩餘天數以 <b>${mdw(D)}</b> 計算</div>`;
