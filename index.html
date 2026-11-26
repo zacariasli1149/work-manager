@@ -56,11 +56,27 @@ aside{background:var(--panel);border-right:1px solid var(--line);display:flex;fl
 .sec{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 6px;font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.04em}
 .sec button{border:0;background:none;color:var(--accent);font-size:18px;line-height:1;padding:0 4px}
 .plist{padding:0 10px;display:flex;flex-direction:column;gap:2px}
-.plist .row{position:relative}
+.plist .row{display:flex;align-items:center;gap:1px;border-radius:8px}
+.plist .row button.p{flex:1;min-width:0}
+.plist .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .plist .dot{width:10px;height:10px;border-radius:3px;flex:none}
-.plist .edit{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:var(--panel);border-radius:6px;padding:2px 6px;color:var(--muted);display:none}
-.plist .row:hover .edit{display:block}
-.plist .row:hover .cnt{visibility:hidden}
+.plist .flag{width:16px;text-align:center;flex:none;font-size:13px}
+.plist .country{font-weight:600}
+.plist .act{display:none;border:0;background:none;color:var(--muted);border-radius:6px;padding:3px 6px;font-size:13px;line-height:1;flex:none}
+.plist .row:hover .act{display:block}
+.plist .act:hover{background:var(--panel-2);color:var(--text)}
+.plist .exp{border:0;background:none;width:26px;height:26px;border-radius:6px;color:var(--muted);font-size:13px;flex:none;display:grid;place-items:center;transition:transform .15s}
+.plist .exp:hover{background:var(--panel-2);color:var(--text)}
+.plist .exp.open{transform:rotate(90deg)}
+.plist .kids{display:flex;flex-direction:column;gap:2px;margin:0 0 4px 17px;padding-left:8px;border-left:1px solid var(--line)}
+.plist .subsec{font-size:11.5px;color:var(--muted);padding:10px 10px 2px}
+.plist .empty-k{font-size:12px;color:var(--muted);padding:4px 10px}
+.pop{position:fixed;z-index:70;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:6px;display:none;min-width:170px}
+.pop.open{display:block}
+.pop button{display:block;width:100%;text-align:left;border:0;background:none;padding:8px 10px;border-radius:6px}
+.pop button:hover{background:var(--panel-2)}
+.fbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:-6px 0 16px;font-size:13px;color:var(--muted)}
+.fbar b{color:var(--text)}
 .side-foot{margin-top:auto;padding:14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
 .side-foot button{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:7px 10px;text-align:left;font-size:13px;color:var(--muted)}
 .side-foot button:hover{color:var(--text);border-color:var(--muted)}
@@ -228,8 +244,10 @@ main{height:100vh;overflow:auto;padding:22px 28px 60px}
   .plist .mobile-only button.p{border-style:dashed;color:var(--accent)}
   .plist button.p{border:1px solid var(--line);border-radius:999px;padding:4px 12px;white-space:nowrap;font-size:13px}
   .plist .cnt{margin-left:4px}
-  .plist .edit{display:none !important}
-  .plist .row:hover .cnt{visibility:visible}
+  .plist .act,.plist .subsec{display:none !important}
+  .plist{align-items:center}
+  .plist .kids{flex-direction:row;align-items:center;margin:0;padding:0 0 0 8px;border-left:2px solid var(--line);gap:6px;height:24px}
+  .plist .exp{width:22px;height:22px}
   main{height:auto;overflow:visible;padding:14px 14px 90px}
   .top{margin-bottom:12px}
   .top h1{font-size:20px}
@@ -265,7 +283,7 @@ main{height:100vh;overflow:auto;padding:22px 28px 60px}
 <aside>
   <div class="brand"><span class="logo">✓</span><span class="name">工作管理系統</span><button class="sync" id="syncBtn" title="雲端同步設定">未同步</button></div>
   <nav class="nav" id="nav"></nav>
-  <div class="sec">專案 <button id="addProj" title="新增專案">＋</button></div>
+  <div class="sec">國家 / 專案 <button data-addmenu title="新增國家或專案">＋</button></div>
   <div class="plist" id="plist"></div>
   <div class="side-foot">
     <button id="syncSetBtn">☁ 雲端同步設定</button>
@@ -314,6 +332,7 @@ main{height:100vh;overflow:auto;padding:22px 28px 60px}
     <header><span id="projTitle">新增專案</span><button type="button" data-close aria-label="關閉">×</button></header>
     <div class="content">
       <div class="field"><label>專案名稱 *</label><input name="name" required maxlength="40"></div>
+      <div class="field"><label>所屬國家</label><select name="countryId"></select></div>
       <div class="field"><label>顏色</label><div class="swatches" id="swatches"></div></div>
     </div>
     <footer>
@@ -322,6 +341,25 @@ main{height:100vh;overflow:auto;padding:22px 28px 60px}
       <button type="submit" class="btn primary">儲存</button>
     </footer>
   </form>
+</div>
+
+<!-- country modal -->
+<div class="mask" id="countryMask">
+  <form class="modal" id="countryForm" autocomplete="off" style="max-width:400px">
+    <header><span id="countryTitle">新增國家</span><button type="button" data-close aria-label="關閉">×</button></header>
+    <div class="content">
+      <div class="field"><label>國家名稱 *</label><input name="name" required maxlength="40" placeholder="例如：南非、台灣、菲律賓"></div>
+    </div>
+    <footer>
+      <button type="button" class="btn danger left" id="delCountry">刪除國家</button>
+      <button type="button" class="btn" data-close>取消</button>
+      <button type="submit" class="btn primary">儲存</button>
+    </footer>
+  </form>
+</div>
+<div class="pop" id="addPop">
+  <button type="button" data-newcountry>🌐 新增國家</button>
+  <button type="button" data-newproj>📁 新增專案</button>
 </div>
 
 <!-- sync modal -->
@@ -382,13 +420,14 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
 /* ================= state ================= */
 const KEY = 'workmgr.data.v1', UIKEY = 'workmgr.ui.v1', SYNCKEY = 'workmgr.sync.v1';
 let state = normalize(store.get(KEY)) || seed();
-let ui = Object.assign({ view:'today', project:'all', showDone:false, search:'', status:'open', ganttW:32 }, store.get(UIKEY) || {});
+let ui = Object.assign({ view:'today', project:'all', showDone:false, search:'', status:'open', ganttW:32, collapsed:{} }, store.get(UIKEY) || {});
 ui.date = todayStr();
 let lastDay = todayStr();
 
 function normalize(s){
   if (!s || !Array.isArray(s.tasks) || !Array.isArray(s.projects)) return null;
   s.deleted = s.deleted && typeof s.deleted === 'object' ? s.deleted : {};
+  s.countries = Array.isArray(s.countries) ? s.countries : [];
   return s;
 }
 function seed(){
@@ -402,6 +441,7 @@ function seed(){
       mk('（範例）兩天後到期', p1, -1, 2),
       mk('（範例）下週的長期任務', p2, 0, 10, 'todo', '甘特圖會顯示從開始日到 Deadline 的完整期間。'),
     ],
+    countries:[],
     deleted:{}
   };
 }
@@ -417,10 +457,27 @@ const pColor = t => proj(t.projectId)?.color || NONE_COLOR;
 const startOf = t => t.start || (t.createdAt || '').slice(0,10) || todayStr();
 const isDone = t => t.status === 'done';
 
+const country = id => state.countries.find(c => c.id === id) || null;
+const projCountry = p => p ? country(p.countryId) : null;
+const looseProjects = () => state.projects.filter(p => !projCountry(p));
 function inFilter(t){
   if (ui.project === 'all') return true;
   if (ui.project === 'none') return !proj(t.projectId);
+  if (ui.project.startsWith('c:')) return proj(t.projectId)?.countryId === ui.project.slice(2);
   return t.projectId === ui.project;
+}
+function filterName(){
+  const f = ui.project;
+  if (f === 'all') return '';
+  if (f === 'none') return '未分類';
+  if (f.startsWith('c:')) return country(f.slice(2))?.name || '';
+  const p = proj(f), c = projCountry(p);
+  return p ? (c ? `${c.name} › ${p.name}` : p.name) : '';
+}
+function validFilter(){
+  const f = ui.project;
+  if (f === 'all' || f === 'none') return;
+  if (f.startsWith('c:') ? !country(f.slice(2)) : !proj(f)) ui.project = 'all';
 }
 const filtered = () => state.tasks.filter(inFilter);
 
@@ -491,7 +548,7 @@ function merge(a, b){
   // drop tombstones older than 90 days to keep the file small
   const cutoff = now() - 90 * 86400000;
   for (const id in deleted) if (deleted[id] < cutoff) delete deleted[id];
-  return { projects: mergeList(a.projects, b.projects), tasks: mergeList(a.tasks, b.tasks), deleted };
+  return { countries: mergeList(a.countries || [], b.countries || []), projects: mergeList(a.projects, b.projects), tasks: mergeList(a.tasks, b.tasks), deleted };
 }
 const sameData = (a, b) => !!a && !!b && JSON.stringify(a) === JSON.stringify(b);
 
@@ -516,7 +573,7 @@ async function syncNow(){
     for (let attempt = 0; attempt < 3; attempt++) {
       const { data: remote, sha } = await pullRemote(syncCfg);
       const before = JSON.stringify(state);
-      const merged = remote ? merge(state, remote) : merge(state, { projects:[], tasks:[], deleted:{} });
+      const merged = remote ? merge(state, remote) : merge(state, { countries:[], projects:[], tasks:[], deleted:{} });
       if (JSON.stringify(merged) !== before) { state = merged; saveLocal(); render(); }
       if (sameData(merged, remote)) break;
       try { await pushRemote(syncCfg, merged, sha); break; }
@@ -562,7 +619,7 @@ sf.addEventListener('submit', async e => {
       state.tasks = state.tasks.filter(t => !t.sample);
       state.projects = state.projects.filter(p => !p.sample);
       if (state.tasks.length && confirm(`雲端已有 ${remote.tasks.length} 項任務。\n\n按「確定」：用雲端資料取代這台裝置的資料\n按「取消」：把兩邊資料合併`)) {
-        state = { projects:[], tasks:[], deleted:{} };
+        state = { countries:[], projects:[], tasks:[], deleted:{} };
       }
       saveLocal();
     }
@@ -587,6 +644,7 @@ $('#syncSetBtn').addEventListener('click', openSync);
 /* ================= rendering ================= */
 const VIEWS = [['today','🎯','今日焦點','今日'],['daily','📅','每日待辦','每日'],['gantt','📊','甘特圖','甘特圖'],['all','📋','全部任務','全部']];
 function render(){
+  validFilter();
   renderNav(); renderProjects();
   const fn = { today:renderToday, daily:renderDaily, gantt:renderGantt, all:renderAll }[ui.view] || renderToday;
   const searchFocused = document.activeElement?.id === 'search';
@@ -614,12 +672,28 @@ function renderNav(){
 }
 function renderProjects(){
   const cnt = f => state.tasks.filter(t => !isDone(t) && f(t)).length;
-  const rows = [`<div class="row"><button class="p ${ui.project==='all'?'on':''}" data-proj="all"><span class="dot" style="background:var(--muted)"></span>全部專案<span class="cnt">${cnt(()=>true)}</span></button></div>`];
-  state.projects.forEach(p => rows.push(`<div class="row"><button class="p ${ui.project===p.id?'on':''}" data-proj="${p.id}"><span class="dot" style="background:${esc(p.color)}"></span>${esc(p.name)}<span class="cnt">${cnt(t=>t.projectId===p.id)}</span></button><button class="edit" data-editproj="${p.id}" title="編輯專案">✎</button></div>`));
+  const sel = ui.project;
+  const projRow = p => `<div class="row"><button class="p ${sel===p.id?'on':''}" data-proj="${p.id}"><span class="dot" style="background:${esc(p.color)}"></span><span class="nm">${esc(p.name)}</span><span class="cnt">${cnt(t=>t.projectId===p.id)}</span></button><button class="act" data-editproj="${p.id}" title="編輯專案">✎</button></div>`;
+  const rows = [];
+  state.countries.forEach(c => {
+    const ps = state.projects.filter(p => p.countryId === c.id), ids = new Set(ps.map(p => p.id));
+    const open = !ui.collapsed[c.id];
+    rows.push(`<div class="row"><button class="p country ${sel==='c:'+c.id?'on':''}" data-proj="c:${c.id}"><span class="flag">🌐</span><span class="nm">${esc(c.name)}</span><span class="cnt">${cnt(t=>ids.has(t.projectId))}</span></button><button class="act" data-addproj="${c.id}" title="在「${esc(c.name)}」新增專案">＋</button><button class="act" data-editcountry="${c.id}" title="編輯國家">✎</button><button class="exp ${open?'open':''}" data-exp="${c.id}" title="${open?'收合':'展開'}" aria-expanded="${open}">❯</button></div>`);
+    if (open) rows.push(`<div class="kids">${ps.length ? ps.map(projRow).join('') : `<div class="empty-k">尚無專案</div>`}</div>`);
+  });
+  const loose = looseProjects();
+  if (loose.length && state.countries.length) rows.push(`<div class="subsec">未指定國家</div>`);
+  loose.forEach(p => rows.push(projRow(p)));
   const nn = cnt(t => !proj(t.projectId));
-  if (nn) rows.push(`<div class="row"><button class="p ${ui.project==='none'?'on':''}" data-proj="none"><span class="dot" style="background:${NONE_COLOR}"></span>未分類<span class="cnt">${nn}</span></button></div>`);
-  rows.push(`<div class="row mobile-only"><button class="p" data-addproj>＋ 專案</button></div>`);
+  if (nn) rows.push(`<div class="row"><button class="p ${sel==='none'?'on':''}" data-proj="none"><span class="dot" style="background:${NONE_COLOR}"></span><span class="nm">未分類任務</span><span class="cnt">${nn}</span></button></div>`);
+  if (!state.countries.length && !state.projects.length) rows.push(`<div class="empty-k">按右上 ＋ 新增國家或專案</div>`);
+  rows.push(`<div class="row mobile-only"><button class="p" data-addmenu>＋ 新增</button></div>`);
   $('#plist').innerHTML = rows.join('');
+}
+function fbar(){
+  if (ui.project === 'all') return '';
+  const editable = ui.project !== 'none';
+  return `<div class="fbar">篩選中：<b>${esc(filterName())}</b>${editable?'<button class="btn sm" data-editfilter>✎ 編輯</button>':''}<button class="btn sm" data-clearfilter>✕ 顯示全部</button></div>`;
 }
 function banner(){
   const T = todayStr();
@@ -653,8 +727,8 @@ function taskHTML(t, ref){
     <span class="badge ${info.cls}">${info.text}</span>
   </div>`;
 }
-const header = (title, sub) => `<div class="top"><h1>${title}</h1><span class="sub">${sub||''}</span><span class="grow"></span><button class="btn primary" data-new>＋ 新增待辦</button></div>`;
-const projLabel = () => ui.project==='all' ? '' : ` · ${esc(ui.project==='none'?'未分類':proj(ui.project)?.name||'')}`;
+const header = (title, sub) => `<div class="top"><h1>${title}</h1><span class="sub">${sub||''}</span><span class="grow"></span><button class="btn primary" data-new>＋ 新增待辦</button></div>` + fbar();
+const projLabel = () => '';
 
 function renderToday(){
   const T = todayStr();
@@ -752,7 +826,8 @@ function renderGantt(){
   months += `<div style="width:${run*W}px">${curM}</div>`;
   const ti = diff(s,T);
   grid += `<div class="now" style="left:${ti*W + W/2 - 1}px" title="今天"></div>`;
-  const groups = [...state.projects.map(p => ({ id:p.id, name:p.name, color:p.color })), { id:null, name:'未分類', color:NONE_COLOR }];
+  const ordered = [...state.countries.flatMap(c => state.projects.filter(p => p.countryId === c.id)), ...looseProjects()];
+  const groups = [...ordered.map(p => { const c = projCountry(p); return { id:p.id, name:(c ? c.name + ' › ' : '') + p.name, color:p.color }; }), { id:null, name:'未分類', color:NONE_COLOR }];
   let rows = '';
   groups.forEach(gp => {
     const list = ts.filter(t => gp.id ? t.projectId === gp.id : !proj(t.projectId)).sort(cmp);
@@ -783,9 +858,15 @@ function scrollGantt(){ const gw = $('#gw'); if (gw) gw.scrollLeft = ganttScroll
 let editing = null;
 const tf = $('#taskForm');
 function fillProjSelect(sel){
-  tf.projectId.innerHTML = `<option value="">未分類</option>` + state.projects.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  const opt = p => `<option value="${p.id}">${esc(p.name)}</option>`;
+  let html = `<option value="">未分類</option>`;
+  state.countries.forEach(c => { const ps = state.projects.filter(p => p.countryId === c.id); if (ps.length) html += `<optgroup label="${esc(c.name)}">${ps.map(opt).join('')}</optgroup>`; });
+  const loose = looseProjects();
+  if (loose.length) html += state.countries.length ? `<optgroup label="未指定國家">${loose.map(opt).join('')}</optgroup>` : loose.map(opt).join('');
+  tf.projectId.innerHTML = html;
   tf.projectId.value = sel || '';
 }
+const filterCountryId = () => ui.project.startsWith('c:') ? ui.project.slice(2) : (proj(ui.project)?.countryId || '');
 function openTask(id){
   const t = id ? state.tasks.find(x => x.id === id) : null;
   if (id && !t) return;
@@ -793,7 +874,7 @@ function openTask(id){
   $('#taskTitle').textContent = t ? '編輯待辦' : '新增待辦';
   $('#delTask').style.display = t ? '' : 'none';
   $('#taskErr').textContent = '';
-  fillProjSelect(t ? t.projectId : (ui.project !== 'all' && ui.project !== 'none' ? ui.project : ''));
+  fillProjSelect(t ? t.projectId : (proj(ui.project) ? ui.project : ''));
   tf.title.value = t?.title || '';
   tf.start.value = t ? startOf(t) : (ui.view === 'daily' && ui.date > todayStr() ? ui.date : todayStr());
   tf.due.value = t?.due || '';
@@ -838,18 +919,21 @@ $('#delTask').addEventListener('click', () => {
 $('#quickProj').addEventListener('click', () => {
   const name = (prompt('新專案名稱') || '').trim();
   if (!name) return;
-  const p = touch({ id:uid(), name, color:COLORS[state.projects.length % COLORS.length], createdAt:new Date().toISOString() });
+  const p = touch({ id:uid(), name, color:COLORS[state.projects.length % COLORS.length], countryId: filterCountryId() || null, createdAt:new Date().toISOString() });
   state.projects.push(p); save(); fillProjSelect(p.id); renderProjects();
 });
 
 /* ================= project modal ================= */
 let editingProj = null, projColor = COLORS[0];
 const pf = $('#projForm');
-function openProj(id){
+function openProj(id, countryId){
   editingProj = id ? proj(id) : null;
   $('#projTitle').textContent = editingProj ? '編輯專案' : '新增專案';
   $('#delProj').style.display = editingProj ? '' : 'none';
   pf.name.value = editingProj?.name || '';
+  pf.countryId.innerHTML = `<option value="">未指定國家</option>` + state.countries.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  pf.countryId.value = (editingProj ? editingProj.countryId : (countryId ?? filterCountryId())) || '';
+  if (!country(pf.countryId.value)) pf.countryId.value = '';
   projColor = editingProj?.color || COLORS[state.projects.length % COLORS.length];
   drawSwatches();
   $('#projMask').classList.add('open');
@@ -860,10 +944,50 @@ $('#swatches').addEventListener('click', e => { const c = e.target.dataset.color
 pf.addEventListener('submit', e => {
   e.preventDefault();
   const name = pf.name.value.trim(); if (!name) return;
-  if (editingProj) touch(Object.assign(editingProj, { name, color:projColor }));
-  else { const p = touch({ id:uid(), name, color:projColor, createdAt:new Date().toISOString() }); state.projects.push(p); ui.project = p.id; }
+  const countryId = pf.countryId.value || null;
+  if (editingProj) touch(Object.assign(editingProj, { name, color:projColor, countryId }));
+  else { const p = touch({ id:uid(), name, color:projColor, countryId, createdAt:new Date().toISOString() }); state.projects.push(p); ui.project = p.id; }
+  if (countryId) delete ui.collapsed[countryId];
   save(); saveUI(); closeModals(); render();
 });
+
+/* ================= country modal ================= */
+let editingCountry = null;
+const cf = $('#countryForm');
+function openCountry(id){
+  editingCountry = id ? country(id) : null;
+  $('#countryTitle').textContent = editingCountry ? '編輯國家' : '新增國家';
+  $('#delCountry').style.display = editingCountry ? '' : 'none';
+  cf.name.value = editingCountry?.name || '';
+  $('#countryMask').classList.add('open');
+  if (innerWidth > 820) setTimeout(() => cf.name.focus(), 30);
+}
+cf.addEventListener('submit', e => {
+  e.preventDefault();
+  const name = cf.name.value.trim(); if (!name) return;
+  if (editingCountry) touch(Object.assign(editingCountry, { name }));
+  else { const c = touch({ id:uid(), name, createdAt:new Date().toISOString() }); state.countries.push(c); ui.project = 'c:' + c.id; }
+  save(); saveUI(); closeModals(); render();
+});
+$('#delCountry').addEventListener('click', () => {
+  const c = editingCountry; if (!c) return;
+  const n = state.projects.filter(p => p.countryId === c.id).length;
+  if (!confirm(n ? `國家「${c.name}」底下有 ${n} 個專案。\n\n按「確定」：刪除國家，專案和任務都保留（改為「未指定國家」）\n按「取消」：不刪除` : `確定刪除國家「${c.name}」？`)) return;
+  state.projects.forEach(p => { if (p.countryId === c.id) { p.countryId = null; touch(p); } });
+  state.countries = state.countries.filter(x => x !== c);
+  state.deleted[c.id] = now();
+  delete ui.collapsed[c.id];
+  if (ui.project === 'c:' + c.id) ui.project = 'all';
+  save(); saveUI(); closeModals(); render(); toast('國家已刪除');
+});
+function openAddMenu(anchor){
+  const pop = $('#addPop'), r = anchor.getBoundingClientRect();
+  pop.classList.add('open');
+  const w = pop.offsetWidth, h = pop.offsetHeight;
+  pop.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px';
+  pop.style.top = (r.bottom + h + 8 > innerHeight ? r.top - h - 4 : r.bottom + 4) + 'px';
+}
+const closeAddMenu = () => $('#addPop').classList.remove('open');
 $('#delProj').addEventListener('click', () => {
   if (!editingProj) return;
   const n = state.tasks.filter(t => t.projectId === editingProj.id).length;
@@ -876,20 +1000,32 @@ $('#delProj').addEventListener('click', () => {
   save(); saveUI(); closeModals(); render(); toast('專案已刪除');
 });
 
-function closeModals(){ document.querySelectorAll('.mask.open').forEach(m => m.classList.remove('open')); editing = null; editingProj = null; }
+function closeModals(){ document.querySelectorAll('.mask.open').forEach(m => m.classList.remove('open')); editing = null; editingProj = null; editingCountry = null; closeAddMenu(); }
 document.querySelectorAll('.mask').forEach(m => m.addEventListener('mousedown', e => { if (e.target === m) closeModals(); }));
 document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModals));
 
 /* ================= events ================= */
 const main = $('#main');
 document.addEventListener('click', e => {
-  const el = e.target.closest('[data-view],[data-proj],[data-editproj],[data-addproj],[data-edit],[data-toggle],[data-new],[data-day],[data-shift],[data-zoom],[data-gtoday],[data-dismiss],[data-opensync],[data-hidesynctip]');
+  const el = e.target.closest('[data-view],[data-proj],[data-editproj],[data-addproj],[data-editcountry],[data-exp],[data-addmenu],[data-newcountry],[data-newproj],[data-editfilter],[data-clearfilter],[data-edit],[data-toggle],[data-new],[data-day],[data-shift],[data-zoom],[data-gtoday],[data-dismiss],[data-opensync],[data-hidesynctip]');
+  if (!el || el.dataset.addmenu === undefined) closeAddMenu();
   if (!el) return;
   const d = el.dataset;
   if (d.view) { ui.view = d.view; if (d.view === 'daily') ui.date = todayStr(); saveUI(); render(); main.scrollTop = 0; scrollTo(0,0); }
+  else if (d.addmenu !== undefined) { $('#addPop').classList.contains('open') ? closeAddMenu() : openAddMenu(el); }
+  else if (d.newcountry !== undefined) openCountry(null);
+  else if (d.newproj !== undefined) openProj(null);
   else if (d.editproj) openProj(d.editproj);
-  else if (d.addproj !== undefined) openProj(null);
-  else if (d.proj) { ui.project = d.proj; saveUI(); render(); }
+  else if (d.addproj) openProj(null, d.addproj);
+  else if (d.editcountry) openCountry(d.editcountry);
+  else if (d.exp) { if (ui.collapsed[d.exp]) delete ui.collapsed[d.exp]; else ui.collapsed[d.exp] = true; saveUI(); renderProjects(); }
+  else if (d.clearfilter !== undefined) { ui.project = 'all'; saveUI(); render(); }
+  else if (d.editfilter !== undefined) { ui.project.startsWith('c:') ? openCountry(ui.project.slice(2)) : openProj(ui.project); }
+  else if (d.proj) {
+    ui.project = ui.project === d.proj ? 'all' : d.proj;   // click the selected one again → show everything
+    if (d.proj.startsWith('c:') && ui.project === d.proj) delete ui.collapsed[d.proj.slice(2)];
+    saveUI(); render();
+  }
   else if (d.toggle) {
     const t = state.tasks.find(x => x.id === d.toggle); if (!t) return;
     if (isDone(t)) { t.status = 'todo'; t.doneAt = null; } else { t.status = 'done'; t.doneAt = todayStr(); toast('完成！👍'); }
@@ -911,7 +1047,6 @@ main.addEventListener('change', e => {
   if (e.target.id === 'showDone') { ui.showDone = e.target.checked; saveUI(); render(); }
   if (e.target.id === 'pickDay' && e.target.value) { ui.date = e.target.value; render(); }
 });
-$('#addProj').addEventListener('click', () => openProj(null));
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeModals();
   const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName);
@@ -931,10 +1066,9 @@ $('#importFile').addEventListener('change', async e => {
     const data = normalize(JSON.parse(await f.text()));
     if (!data) throw 0;
     if (!confirm(`匯入 ${data.tasks.length} 項任務、${data.projects.length} 個專案，將取代目前所有資料${syncCfg?'（雲端也會一起更新）':''}。確定？`)) return;
-    const t = now(), keep = new Set([...data.tasks, ...data.projects].map(x => x.id));
-    [...state.tasks, ...state.projects].forEach(x => { if (!keep.has(x.id)) data.deleted[x.id] = t; });
-    [...data.tasks, ...data.projects].forEach(x => { x.updatedAt = t; delete x.sample; x.createdAt = x.createdAt || new Date().toISOString(); });
-    data.tasks.forEach(x => delete data.deleted[x.id]); data.projects.forEach(x => delete data.deleted[x.id]);
+    const t = now(), incoming = [...data.tasks, ...data.projects, ...data.countries], keep = new Set(incoming.map(x => x.id));
+    [...state.tasks, ...state.projects, ...state.countries].forEach(x => { if (!keep.has(x.id)) data.deleted[x.id] = t; });
+    incoming.forEach(x => { x.updatedAt = t; delete x.sample; x.createdAt = x.createdAt || new Date().toISOString(); delete data.deleted[x.id]; });
     state = data; ui.project = 'all'; save(); saveUI(); render(); toast('匯入完成');
   } catch(err) { alert('檔案格式不正確，無法匯入。'); }
 });
